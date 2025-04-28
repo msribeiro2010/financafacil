@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
-import { Pencil, Trash2, Plus, Calendar, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Pencil, Trash2, Plus, Calendar, ArrowUpCircle, ArrowDownCircle, FileText } from 'lucide-react';
 import ExpenseModal from '@/components/modals/ExpenseModal';
 import IncomeModal from '@/components/modals/IncomeModal';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -319,6 +319,17 @@ export default function Recurring({ userId }: RecurringProps) {
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-right">
+                                {transaction.attachment && (
+                                  <a 
+                                    href={`/${transaction.attachment}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium text-blue-600 hover:bg-blue-50 mr-1"
+                                    title="Visualizar anexo/boleto"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </a>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
