@@ -27,13 +27,13 @@ export default function MobileNav({ currentPath }: MobileNavProps) {
       <div className="flex justify-around">
         {navItems.map((item, index) => (
           <Link key={index} href={item.path}>
-            <a className={cn(
-              "flex flex-col items-center p-3",
+            <div className={cn(
+              "flex flex-col items-center p-3 cursor-pointer",
               currentPath === item.path ? "text-primary" : "text-slate-500"
             )}>
               <i className={`${item.icon} text-xl`}></i>
               <span className="text-xs mt-1">{item.label}</span>
-            </a>
+            </div>
           </Link>
         ))}
         

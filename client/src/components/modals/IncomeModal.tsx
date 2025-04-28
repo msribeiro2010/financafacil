@@ -168,18 +168,27 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
     // Check if it's a recurring transaction
     if (values.isRecurring && !isEditMode) {
       // Create recurring transaction
-      const recurringFormData = new FormData();
-      recurringFormData.append('userId', userId.toString());
-      recurringFormData.append('type', 'income');
-      recurringFormData.append('description', values.description);
-      recurringFormData.append('amount', values.amount);
-      recurringFormData.append('categoryId', values.categoryId);
-      recurringFormData.append('frequency', values.frequency || 'monthly');
-      recurringFormData.append('startDate', values.startDate || values.date);
+      const recurringData: any = {
+        userId: parseInt(userId.toString()),
+        type: 'income',
+        description: values.description,
+        amount: values.amount,
+        categoryId: parseInt(values.categoryId),
+        frequency: values.frequency || 'monthly',
+        startDate: values.startDate || values.date
+      };
       
       if (values.endDate) {
-        recurringFormData.append('endDate', values.endDate);
+        recurringData.endDate = values.endDate;
       }
+      
+      // Convert to FormData
+      const recurringFormData = new FormData();
+      Object.entries(recurringData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          recurringFormData.append(key, value.toString());
+        }
+      });
       
       if (file) {
         recurringFormData.append('attachment', file);
