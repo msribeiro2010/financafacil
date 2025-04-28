@@ -260,14 +260,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = req.body;
       
+      // Log the incoming data for debugging
+      console.log("Recurring transaction data received:", data);
+      
       // Convert string values to appropriate types
       const transactionData = {
-        ...data,
         userId: parseInt(data.userId),
+        type: data.type,
+        description: data.description,
         amount: data.amount,
+        frequency: data.frequency,
+        startDate: data.startDate,
         categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
-        startDate: new Date(data.startDate),
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        endDate: data.endDate || undefined,
         attachment: req.file ? req.file.path : undefined
       };
       
@@ -288,13 +293,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const data = req.body;
       
+      // Log the incoming data for debugging
+      console.log("Recurring transaction update data received:", data);
+      
       // Convert string values to appropriate types
-      const transactionData: any = { ...data };
+      const transactionData: any = {};
       
       if (data.userId) transactionData.userId = parseInt(data.userId);
+      if (data.type) transactionData.type = data.type;
+      if (data.description) transactionData.description = data.description;
+      if (data.amount) transactionData.amount = data.amount;
+      if (data.frequency) transactionData.frequency = data.frequency;
       if (data.categoryId) transactionData.categoryId = parseInt(data.categoryId);
-      if (data.startDate) transactionData.startDate = new Date(data.startDate);
-      if (data.endDate) transactionData.endDate = new Date(data.endDate);
+      if (data.startDate) transactionData.startDate = data.startDate;
+      if (data.endDate) transactionData.endDate = data.endDate;
       if (req.file) transactionData.attachment = req.file.path;
       
       const transaction = await storage.updateRecurringTransaction(id, transactionData);
