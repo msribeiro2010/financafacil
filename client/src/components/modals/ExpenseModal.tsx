@@ -189,7 +189,14 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       
       // Create recurring transaction
       apiRequest('POST', '/api/recurring', recurringFormData)
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (!res.ok) {
+            const errorData = await res.json();
+            console.error('Error creating recurring transaction:', errorData);
+            throw new Error(JSON.stringify(errorData));
+          }
+          return res.json();
+        })
         .then((data) => {
           // Add recurring ID to transaction
           formData.append('recurringId', data.id.toString());
@@ -201,10 +208,11 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
             createTransaction.mutate(formData);
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('Recurring transaction error:', error);
           toast({
             title: 'Erro',
-            description: 'Ocorreu um erro ao registrar a despesa recorrente.',
+            description: 'Ocorreu um erro ao registrar a despesa recorrente. Verifique o console para mais detalhes.',
             variant: 'destructive',
           });
         });
