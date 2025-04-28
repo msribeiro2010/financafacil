@@ -217,14 +217,14 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
           if (isEditMode) {
             updateTransaction.mutate({ id: transaction.id, data: formData });
           } else {
-            // Convert FormData to JSON for consistency
+            // Prepare transaction data, making sure to keep date as string
             const transactionData = {
               userId: parseInt(userId.toString()),
               type: 'expense',
               description: values.description,
               amount: values.amount,
               categoryId: parseInt(values.categoryId),
-              date: values.date,
+              date: values.date.toString(), // Ensure date is sent as string
               recurringId: data.id
             };
             

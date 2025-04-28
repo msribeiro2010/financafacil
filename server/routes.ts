@@ -169,13 +169,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = req.body;
       
-      // Convert string values to appropriate types
+      // Convert string values to appropriate types but keep date as string
       const transactionData = {
         ...data,
         userId: parseInt(data.userId),
         amount: data.amount,
         categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
-        date: new Date(data.date),
+        date: data.date, // Keep date as string to match schema expectations
         isRecurring: data.isRecurring === "true",
         recurringId: data.recurringId ? parseInt(data.recurringId) : undefined,
         attachment: req.file ? req.file.path : undefined
@@ -203,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (data.userId) transactionData.userId = parseInt(data.userId);
       if (data.categoryId) transactionData.categoryId = parseInt(data.categoryId);
-      if (data.date) transactionData.date = new Date(data.date);
+      if (data.date) transactionData.date = data.date; // Keep as string
       if (data.isRecurring !== undefined) transactionData.isRecurring = data.isRecurring === "true";
       if (data.recurringId) transactionData.recurringId = parseInt(data.recurringId);
       if (req.file) transactionData.attachment = req.file.path;
