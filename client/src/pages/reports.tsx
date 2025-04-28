@@ -10,7 +10,7 @@ import {
 } from '@mui/x-charts/PieChart';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line
+  LineChart, Line, Cell
 } from 'recharts';
 import { startOfMonth, endOfMonth, format, getMonth, subMonths, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
