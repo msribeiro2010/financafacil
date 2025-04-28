@@ -77,20 +77,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
+      console.log(`Login attempt for username: ${username}`);
+      
       if (!username || !password) {
+        console.log("Missing username or password");
         return res.status(400).json({ message: "Usuário e senha são obrigatórios" });
       }
       
       const user = await storage.getUserByUsername(username);
+      console.log(`User found:`, user ? "Yes" : "No");
       
       if (!user || user.password !== password) {
+        console.log("Invalid credentials");
         return res.status(401).json({ message: "Usuário ou senha inválidos" });
       }
       
+      console.log("Login successful");
       // Don't send password
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
+      console.error("Login error:", error);
       res.status(500).json({ message: "Erro ao fazer login" });
     }
   });

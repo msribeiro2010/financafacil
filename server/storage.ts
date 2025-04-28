@@ -1,10 +1,12 @@
 import { 
-  User, InsertUser, Transaction, InsertTransaction, 
-  RecurringTransaction, InsertRecurringTransaction,
-  Category, InsertCategory, TransactionSummary, CategorySummary
+  users, User, InsertUser, 
+  transactions, Transaction, InsertTransaction, 
+  recurringTransactions, RecurringTransaction, InsertRecurringTransaction,
+  categories, Category, InsertCategory, 
+  TransactionSummary, CategorySummary
 } from "@shared/schema";
-import path from "path";
-import fs from "fs";
+import { db } from "./db";
+import { eq, and, gte, lte, desc, count } from "drizzle-orm";
 
 // Define storage interface
 export interface IStorage {
@@ -39,221 +41,171 @@ export interface IStorage {
   getUpcomingBills(userId: number): Promise<Transaction[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private categories: Map<number, Category>;
-  private transactions: Map<number, Transaction>;
-  private recurringTransactions: Map<number, RecurringTransaction>;
-  private userIdCounter: number;
-  private categoryIdCounter: number;
-  private transactionIdCounter: number;
-  private recurringTransactionIdCounter: number;
-  
-  constructor() {
-    this.users = new Map();
-    this.categories = new Map();
-    this.transactions = new Map();
-    this.recurringTransactions = new Map();
-    this.userIdCounter = 1;
-    this.categoryIdCounter = 1;
-    this.transactionIdCounter = 1;
-    this.recurringTransactionIdCounter = 1;
-    
-    // Initialize with default categories
-    this.initializeDefaultCategories();
-    
-    // Create a demo user for testing
-    this.createUser({
-      username: "demo",
-      password: "demo123",
-      initialBalance: "1800.00",
-      overdraftLimit: "1000.00"
-    });
-  }
-  
-  // Initialize default categories
-  private initializeDefaultCategories() {
-    const incomeCategories = [
-      { name: "Salário", type: "income", icon: "ri-money-dollar-circle-line" },
-      { name: "Freelance", type: "income", icon: "ri-briefcase-line" },
-      { name: "Investimentos", type: "income", icon: "ri-line-chart-line" },
-      { name: "Vendas", type: "income", icon: "ri-store-line" },
-      { name: "Outras", type: "income", icon: "ri-wallet-line" }
-    ];
-    
-    const expenseCategories = [
-      { name: "Moradia", type: "expense", icon: "ri-home-line" },
-      { name: "Alimentação", type: "expense", icon: "ri-shopping-cart-line" },
-      { name: "Transporte", type: "expense", icon: "ri-car-line" },
-      { name: "Saúde", type: "expense", icon: "ri-heart-pulse-line" },
-      { name: "Educação", type: "expense", icon: "ri-book-open-line" },
-      { name: "Lazer", type: "expense", icon: "ri-gamepad-line" },
-      { name: "Serviços", type: "expense", icon: "ri-file-list-line" },
-      { name: "Utilidades", type: "expense", icon: "ri-lightbulb-line" },
-      { name: "Outras", type: "expense", icon: "ri-question-line" }
-    ];
-    
-    [...incomeCategories, ...expenseCategories].forEach(cat => {
-      this.createCategory(cat);
-    });
-  }
-  
+export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    for (const user of this.users.values()) {
-      if (user.username === username) {
-        return user;
-      }
-    }
-    return undefined;
+    console.log(`Looking for user with username: ${username}`);
+    const result = await db.select().from(users).where(eq(users.username, username));
+    console.log(`Found users:`, result);
+    const [user] = result;
+    return user;
   }
   
   async createUser(user: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const newUser: User = {
-      id,
-      ...user,
-      createdAt: new Date()
-    };
-    this.users.set(id, newUser);
+    const [newUser] = await db.insert(users).values(user).returning();
     
-    // Add some default transactions for demo
-    if (user.username === "demo") {
-      this.addDemoTransactions(id);
+    // If this is the first user, initialize the database
+    const userCount = await db.select({ count: count() }).from(users);
+    if (userCount[0].count === 1) {
+      await this.initializeDefaultCategories();
+      await this.addDemoTransactions(newUser.id);
     }
     
     return newUser;
   }
   
   async updateUserSettings(userId: number, initialBalance: string, overdraftLimit: string): Promise<User> {
-    const user = await this.getUser(userId);
-    if (!user) throw new Error("User not found");
+    const [updatedUser] = await db
+      .update(users)
+      .set({ initialBalance, overdraftLimit })
+      .where(eq(users.id, userId))
+      .returning();
     
-    const updatedUser: User = {
-      ...user,
-      initialBalance,
-      overdraftLimit
-    };
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
     
-    this.users.set(userId, updatedUser);
     return updatedUser;
   }
   
   // Category methods
   async getCategories(type?: string): Promise<Category[]> {
-    const categories = Array.from(this.categories.values());
     if (type) {
-      return categories.filter(cat => cat.type === type);
+      return db.select().from(categories).where(eq(categories.type, type));
     }
-    return categories;
+    return db.select().from(categories);
   }
   
   async getCategoryById(id: number): Promise<Category | undefined> {
-    return this.categories.get(id);
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category;
   }
   
   async createCategory(category: InsertCategory): Promise<Category> {
-    const id = this.categoryIdCounter++;
-    const newCategory: Category = {
-      id,
-      ...category
-    };
-    this.categories.set(id, newCategory);
+    const [newCategory] = await db.insert(categories).values(category).returning();
     return newCategory;
   }
   
   // Transaction methods
   async getTransactions(userId: number, limit?: number): Promise<Transaction[]> {
-    const userTransactions = Array.from(this.transactions.values())
-      .filter(transaction => transaction.userId === userId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    let queryResult = await db.select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.date));
     
-    return limit ? userTransactions.slice(0, limit) : userTransactions;
+    if (limit) {
+      return queryResult.slice(0, limit);
+    }
+    
+    return queryResult;
   }
   
   async getTransactionById(id: number): Promise<Transaction | undefined> {
-    return this.transactions.get(id);
+    const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
+    return transaction;
   }
   
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const id = this.transactionIdCounter++;
-    const newTransaction: Transaction = {
-      id,
-      ...transaction,
-      createdAt: new Date()
-    };
-    this.transactions.set(id, newTransaction);
+    const [newTransaction] = await db.insert(transactions).values(transaction).returning();
     return newTransaction;
   }
   
   async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
-    const existingTransaction = await this.getTransactionById(id);
-    if (!existingTransaction) throw new Error("Transaction not found");
+    const [updatedTransaction] = await db
+      .update(transactions)
+      .set(transaction)
+      .where(eq(transactions.id, id))
+      .returning();
     
-    const updatedTransaction: Transaction = {
-      ...existingTransaction,
-      ...transaction,
-    };
+    if (!updatedTransaction) {
+      throw new Error("Transaction not found");
+    }
     
-    this.transactions.set(id, updatedTransaction);
     return updatedTransaction;
   }
   
   async deleteTransaction(id: number): Promise<boolean> {
-    return this.transactions.delete(id);
+    const [deleted] = await db
+      .delete(transactions)
+      .where(eq(transactions.id, id))
+      .returning({ id: transactions.id });
+    
+    return !!deleted;
   }
   
   // Recurring transaction methods
   async getRecurringTransactions(userId: number): Promise<RecurringTransaction[]> {
-    return Array.from(this.recurringTransactions.values())
-      .filter(transaction => transaction.userId === userId)
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    return db.select()
+      .from(recurringTransactions)
+      .where(eq(recurringTransactions.userId, userId))
+      .orderBy(recurringTransactions.startDate);
   }
   
   async getRecurringTransactionById(id: number): Promise<RecurringTransaction | undefined> {
-    return this.recurringTransactions.get(id);
+    const [transaction] = await db
+      .select()
+      .from(recurringTransactions)
+      .where(eq(recurringTransactions.id, id));
+    
+    return transaction;
   }
   
   async createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction> {
-    const id = this.recurringTransactionIdCounter++;
-    const newTransaction: RecurringTransaction = {
-      id,
-      ...transaction,
-      createdAt: new Date()
-    };
-    this.recurringTransactions.set(id, newTransaction);
+    const [newTransaction] = await db
+      .insert(recurringTransactions)
+      .values(transaction)
+      .returning();
+    
     return newTransaction;
   }
   
   async updateRecurringTransaction(id: number, transaction: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction> {
-    const existingTransaction = await this.getRecurringTransactionById(id);
-    if (!existingTransaction) throw new Error("Recurring transaction not found");
+    const [updatedTransaction] = await db
+      .update(recurringTransactions)
+      .set(transaction)
+      .where(eq(recurringTransactions.id, id))
+      .returning();
     
-    const updatedTransaction: RecurringTransaction = {
-      ...existingTransaction,
-      ...transaction,
-    };
+    if (!updatedTransaction) {
+      throw new Error("Recurring transaction not found");
+    }
     
-    this.recurringTransactions.set(id, updatedTransaction);
     return updatedTransaction;
   }
   
   async deleteRecurringTransaction(id: number): Promise<boolean> {
-    return this.recurringTransactions.delete(id);
+    const [deleted] = await db
+      .delete(recurringTransactions)
+      .where(eq(recurringTransactions.id, id))
+      .returning({ id: recurringTransactions.id });
+    
+    return !!deleted;
   }
   
   // Summary and reporting
   async getTransactionSummary(userId: number): Promise<TransactionSummary> {
-    const transactions = await this.getTransactions(userId);
     const user = await this.getUser(userId);
     
     if (!user) {
       throw new Error("User not found");
     }
+    
+    const transactions = await this.getTransactions(userId);
     
     // Parse numeric values
     const initialBalance = parseFloat(user.initialBalance as string);
@@ -302,14 +254,14 @@ export class MemStorage implements IStorage {
   }
   
   async getCategorySummary(userId: number, type: string): Promise<CategorySummary[]> {
-    const transactions = (await this.getTransactions(userId))
-      .filter(transaction => transaction.type === type);
+    const transactionsList = await this.getTransactions(userId);
+    const filteredTransactions = transactionsList.filter(t => t.type === type);
     
     const categorySums = new Map<number, number>();
     let total = 0;
     
     // Calculate sum by category
-    for (const transaction of transactions) {
+    for (const transaction of filteredTransactions) {
       if (transaction.categoryId) {
         const amount = parseFloat(transaction.amount as string);
         const current = categorySums.get(transaction.categoryId) || 0;
@@ -342,26 +294,61 @@ export class MemStorage implements IStorage {
     const thirtyDaysLater = new Date();
     thirtyDaysLater.setDate(today.getDate() + 30);
     
-    // Get upcoming bills (expense transactions with a future date)
-    const upcoming = (await this.getTransactions(userId))
+    // Get all transactions for the user
+    const allTransactions = await this.getTransactions(userId);
+    
+    // Filter for upcoming expense transactions
+    return allTransactions
       .filter(transaction => 
-        transaction.type === "expense" && 
-        new Date(transaction.date) >= today && 
+        transaction.type === "expense" &&
+        new Date(transaction.date) >= today &&
         new Date(transaction.date) <= thirtyDaysLater
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    return upcoming;
   }
   
-  // Helper method to create demo transactions
-  private addDemoTransactions(userId: number) {
-    // Get category IDs
-    let salaryCategory: number = 1;
-    let housingCategory: number = 6;
-    let foodCategory: number = 7;
-    let transportCategory: number = 8;
-    let utilitiesCategory: number = 13;
+  // Helper methods for initial setup
+  private async initializeDefaultCategories() {
+    const incomeCategories = [
+      { name: "Salário", type: "income", icon: "ri-money-dollar-circle-line" },
+      { name: "Freelance", type: "income", icon: "ri-briefcase-line" },
+      { name: "Investimentos", type: "income", icon: "ri-line-chart-line" },
+      { name: "Vendas", type: "income", icon: "ri-store-line" },
+      { name: "Outras", type: "income", icon: "ri-wallet-line" }
+    ];
+    
+    const expenseCategories = [
+      { name: "Moradia", type: "expense", icon: "ri-home-line" },
+      { name: "Alimentação", type: "expense", icon: "ri-shopping-cart-line" },
+      { name: "Transporte", type: "expense", icon: "ri-car-line" },
+      { name: "Saúde", type: "expense", icon: "ri-heart-pulse-line" },
+      { name: "Educação", type: "expense", icon: "ri-book-open-line" },
+      { name: "Lazer", type: "expense", icon: "ri-gamepad-line" },
+      { name: "Serviços", type: "expense", icon: "ri-file-list-line" },
+      { name: "Utilidades", type: "expense", icon: "ri-lightbulb-line" },
+      { name: "Outras", type: "expense", icon: "ri-question-line" }
+    ];
+    
+    for (const category of [...incomeCategories, ...expenseCategories]) {
+      await this.createCategory(category);
+    }
+  }
+  
+  private async addDemoTransactions(userId: number) {
+    // Get all categories
+    const allCategories = await this.getCategories();
+    
+    // Find category IDs by name
+    const findCategoryId = (name: string, type: string) => {
+      const found = allCategories.find(c => c.name === name && c.type === type);
+      return found ? found.id : null;
+    };
+    
+    const salaryCategory = findCategoryId("Salário", "income") || 1;
+    const housingCategory = findCategoryId("Moradia", "expense") || 6;
+    const foodCategory = findCategoryId("Alimentação", "expense") || 7;
+    const transportCategory = findCategoryId("Transporte", "expense") || 8;
+    const utilitiesCategory = findCategoryId("Utilidades", "expense") || 13;
     
     const today = new Date();
     const thisMonth = today.getMonth();
@@ -373,7 +360,7 @@ export class MemStorage implements IStorage {
         userId,
         description: "Salário",
         amount: "3800.00",
-        date: new Date(thisYear, thisMonth, 10),
+        date: new Date(thisYear, thisMonth, 10).toISOString(),
         type: "income",
         categoryId: salaryCategory,
         isRecurring: true
@@ -382,7 +369,7 @@ export class MemStorage implements IStorage {
         userId,
         description: "Aluguel",
         amount: "850.00",
-        date: new Date(thisYear, thisMonth, 5),
+        date: new Date(thisYear, thisMonth, 5).toISOString(),
         type: "expense",
         categoryId: housingCategory,
         isRecurring: true
@@ -391,7 +378,7 @@ export class MemStorage implements IStorage {
         userId,
         description: "Supermercado",
         amount: "245.90",
-        date: new Date(thisYear, thisMonth, 15),
+        date: new Date(thisYear, thisMonth, 15).toISOString(),
         type: "expense",
         categoryId: foodCategory,
         isRecurring: false
@@ -400,7 +387,7 @@ export class MemStorage implements IStorage {
         userId,
         description: "Combustível",
         amount: "120.00",
-        date: new Date(thisYear, thisMonth, 3),
+        date: new Date(thisYear, thisMonth, 3).toISOString(),
         type: "expense",
         categoryId: transportCategory,
         isRecurring: false
@@ -409,7 +396,7 @@ export class MemStorage implements IStorage {
         userId,
         description: "Internet",
         amount: "120.00",
-        date: new Date(thisYear, thisMonth + 1, today.getDate() + 2),
+        date: new Date(thisYear, thisMonth + 1, today.getDate() + 2).toISOString(),
         type: "expense",
         categoryId: utilitiesCategory,
         isRecurring: true
@@ -418,7 +405,7 @@ export class MemStorage implements IStorage {
         userId,
         description: "Energia Elétrica",
         amount: "189.75",
-        date: new Date(),
+        date: new Date().toISOString(),
         type: "expense",
         categoryId: utilitiesCategory,
         isRecurring: true
@@ -434,7 +421,7 @@ export class MemStorage implements IStorage {
         type: "income",
         categoryId: salaryCategory,
         frequency: "monthly",
-        startDate: new Date(thisYear, thisMonth, 10)
+        startDate: new Date(thisYear, thisMonth, 10).toISOString()
       },
       {
         userId,
@@ -443,7 +430,7 @@ export class MemStorage implements IStorage {
         type: "expense",
         categoryId: housingCategory,
         frequency: "monthly",
-        startDate: new Date(thisYear, thisMonth, 5)
+        startDate: new Date(thisYear, thisMonth, 5).toISOString()
       },
       {
         userId,
@@ -452,7 +439,7 @@ export class MemStorage implements IStorage {
         type: "expense",
         categoryId: utilitiesCategory,
         frequency: "monthly",
-        startDate: new Date(thisYear, thisMonth, 25)
+        startDate: new Date(thisYear, thisMonth, 25).toISOString()
       },
       {
         userId,
@@ -461,20 +448,20 @@ export class MemStorage implements IStorage {
         type: "expense",
         categoryId: utilitiesCategory,
         frequency: "monthly",
-        startDate: new Date()
+        startDate: new Date().toISOString()
       }
     ];
     
     // Create transactions
-    transactions.forEach(transaction => {
-      this.createTransaction(transaction);
-    });
+    for (const transaction of transactions) {
+      await this.createTransaction(transaction);
+    }
     
     // Create recurring transactions
-    recurringTransactions.forEach(transaction => {
-      this.createRecurringTransaction(transaction);
-    });
+    for (const transaction of recurringTransactions) {
+      await this.createRecurringTransaction(transaction);
+    }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
