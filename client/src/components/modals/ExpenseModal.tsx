@@ -217,7 +217,45 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
           if (isEditMode) {
             updateTransaction.mutate({ id: transaction.id, data: formData });
           } else {
-            createTransaction.mutate(formData);
+            // Convert FormData to JSON for consistency
+            const transactionData = {
+              userId: parseInt(userId.toString()),
+              type: 'expense',
+              description: values.description,
+              amount: values.amount,
+              categoryId: parseInt(values.categoryId),
+              date: values.date,
+              recurringId: data.id
+            };
+            
+            console.log("Creating first occurrence of recurring expense:", transactionData);
+            apiRequest('POST', '/api/transactions', transactionData)
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error('Failed to create first occurrence');
+                }
+                return response.json();
+              })
+              .then(() => {
+                toast({
+                  title: 'Sucesso',
+                  description: 'Despesa recorrente registrada com sucesso!',
+                });
+                queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
+                queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+                queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
+                form.reset();
+                setFile(null);
+                onClose();
+              })
+              .catch(error => {
+                console.error('Error creating first occurrence:', error);
+                toast({
+                  title: 'Atenção',
+                  description: 'Despesa recorrente criada, mas houve um erro ao registrar a primeira ocorrência.',
+                  variant: 'destructive',
+                });
+              });
           }
         })
         .catch((error) => {
