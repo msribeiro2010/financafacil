@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 192 91% 36%; /* Custom cyan color for FinançaFácil */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 196 64% 24%; /* Darker cyan */
+  --secondary-foreground: 24 9.8% 10%;
+  --accent: 146 64% 36%; /* Success green for incomes */
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%; /* Red for expenses */
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 192 91% 36%;
+  --radius: 0.5rem;
+  --chart-1: 192 91% 36%; /* Primary color */
+  --chart-2: 0 84.2% 60.2%; /* Red */
+  --chart-3: 146 64% 36%; /* Green */
+  --chart-4: 35 92% 53%; /* Amber */
+  --chart-5: 236 72% 56%; /* Blue */
+  
+  /* Sidebar */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 20 14.3% 4.1%;
+  --sidebar-primary: 192 91% 36%;
+  --sidebar-primary-foreground: 211 100% 99%;
+  --sidebar-accent: 195 7% 95%;
+  --sidebar-accent-foreground: 192 91% 36%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 192 91% 36%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 192 91% 36%; /* Custom cyan color for FinançaFácil */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 196 64% 24%; /* Darker cyan */
+  --secondary-foreground: 0 0% 98%;
+  --accent: 146 64% 36%; /* Success green for incomes */
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 192 91% 36%;
+  --radius: 0.5rem;
+  
+  /* Sidebar */
+  --sidebar-background: 240 10% 3.9%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 192 91% 36%;
+  --sidebar-primary-foreground: 211 100% 99%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 192 91% 36%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 192 91% 36%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-slate-100 text-slate-800;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 hover:bg-slate-600;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
