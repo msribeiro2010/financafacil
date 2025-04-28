@@ -169,38 +169,38 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
     
     // Check if it's a recurring transaction
     if (values.isRecurring && !isEditMode) {
-      // Create recurring transaction data
-      const recurringFormData = new FormData();
-      recurringFormData.append('userId', userId.toString());
-      recurringFormData.append('type', 'expense');
-      recurringFormData.append('description', values.description);
-      recurringFormData.append('amount', values.amount);
-      recurringFormData.append('categoryId', values.categoryId);
-      recurringFormData.append('frequency', values.frequency || 'monthly');
-      recurringFormData.append('startDate', values.startDate || values.date);
-      
-      if (values.endDate) {
-        recurringFormData.append('endDate', values.endDate);
-      }
-      
-      // Log what we're sending
-      console.log("Submitting recurring expense data:", {
-        userId: userId.toString(),
+      // Prepare recurring transaction data as JSON
+      const recurringData: { 
+        userId: number;
+        type: string;
+        description: string;
+        amount: string;
+        categoryId: number;
+        frequency: string;
+        startDate: string;
+        endDate?: string;
+      } = {
+        userId: parseInt(userId.toString()),
         type: 'expense',
         description: values.description,
         amount: values.amount,
-        categoryId: values.categoryId,
+        categoryId: parseInt(values.categoryId),
         frequency: values.frequency || 'monthly',
-        startDate: values.startDate || values.date,
-        endDate: values.endDate || undefined
-      });
+        startDate: values.startDate || values.date
+      };
       
-      if (file) {
-        recurringFormData.append('attachment', file);
+      if (values.endDate) {
+        recurringData.endDate = values.endDate;
       }
       
-      // Create recurring transaction
-      apiRequest('POST', '/api/recurring', recurringFormData)
+      // Log what we're sending
+      console.log("Submitting recurring expense data:", recurringData);
+      
+      // For file uploads, we would need a different approach
+      // but for now, let's just submit the JSON data
+      
+      // Create recurring transaction with JSON data
+      apiRequest('POST', '/api/recurring', recurringData)
         .then(async (res) => {
           if (!res.ok) {
             const errorData = await res.json();
