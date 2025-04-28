@@ -26,15 +26,15 @@ export default function Sidebar({ currentPath }: SidebarProps) {
           {navItems.map((item) => (
             <li key={item.path}>
               <Link href={item.path}>
-                <a className={cn(
-                  "flex items-center p-2 rounded-lg",
+                <div className={cn(
+                  "flex items-center p-2 rounded-lg cursor-pointer",
                   currentPath === item.path
                     ? "text-primary bg-cyan-50"
                     : "text-slate-700 hover:bg-slate-100"
                 )}>
                   <i className={`${item.icon} mr-2`}></i>
                   <span>{item.label}</span>
-                </a>
+                </div>
               </Link>
             </li>
           ))}

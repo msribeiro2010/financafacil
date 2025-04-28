@@ -1,0 +1,17 @@
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of <a>.
+a
+a
+Link<@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e9c88031:279:18
+li
+ul
+nav
+aside
+Sidebar@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/src/components/layout/Sidebar.tsx:19:32
+div
+AppLayout@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/src/components/layout/AppLayout.tsx:37:34
+Provider@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-W6PG6DRF.js?v=e9c88031:38:47
+TooltipProvider@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e9c88031:64:7
+QueryClientProvider@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e9c88031:2804:27
+App@https://88ab903c-e329-4c55-b404-bf27d6cc5164-00-37x17bwobr7xk.worf.replit.dev/src/App.tsx?v=Ck1G6dcx3GKi4W0s9IHLm:33:35 react-dom.development.js:86:29
+Recurring transaction error: Error: 400: {"message":"Dados inválidos","errors":[{"code":"invalid_type","expected":"number","received":"nan","path":["userId"],"message":"Expected number, received nan"},{"code":"invalid_type","expected":"string","received":"undefined","path":["description"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["amount"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["type"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["frequency"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"date","path":["startDate"],"message":"Expected string, received date"}]}
+    throwIfResNotOk queryClient.ts:6
