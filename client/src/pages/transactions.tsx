@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
-import { Pencil, Trash2, Plus, Search, ArrowUpDown, Filter, CalendarIcon } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ArrowUpDown, Filter, CalendarIcon, FileText, ExternalLink } from 'lucide-react';
 import ExpenseModal from '@/components/modals/ExpenseModal';
 import IncomeModal from '@/components/modals/IncomeModal';
 import { apiRequest, queryClient } from '@/lib/queryClient';
