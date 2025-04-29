@@ -33,6 +33,18 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
     enabled: isOpen,
   });
   
+  // Get user data for overdraft limit check
+  const { data: userData } = useQuery({
+    queryKey: [`/api/user/${userId}`],
+    enabled: isOpen,
+  });
+  
+  // Get financial summary for current balance
+  const { data: financialSummary } = useQuery({
+    queryKey: [`/api/summary/${userId}`],
+    enabled: isOpen,
+  });
+  
   // Form schema
   const formSchema = z.object({
     description: z.string().min(1, { message: 'Descrição é obrigatória' }),
@@ -147,6 +159,40 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   
   // Form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Verificar se a despesa não ultrapassa o saldo + limite de cheque especial
+    if (userData && financialSummary && !isEditMode) {
+      const expenseAmount = parseFloat(values.amount);
+      const currentBalance = financialSummary.currentBalance;
+      const overdraftLimit = parseFloat(userData.overdraftLimit);
+      const availableTotal = currentBalance + overdraftLimit;
+      
+      // Se for edição de uma despesa existente, considerar o valor anterior
+      const previousAmount = isEditMode ? parseFloat(transaction.amount) : 0;
+      const netExpense = expenseAmount - previousAmount;
+      
+      // Se o total disponível menos a nova despesa for negativo, mostrar alerta
+      if (availableTotal - netExpense < 0) {
+        const result = window.confirm(
+          `⚠️ Atenção! Esta despesa ultrapassa seu saldo disponível e limite de cheque especial.\n\n` +
+          `Saldo atual: R$ ${currentBalance.toFixed(2)}\n` +
+          `Limite de cheque especial: R$ ${overdraftLimit.toFixed(2)}\n` +
+          `Total disponível: R$ ${availableTotal.toFixed(2)}\n` +
+          `Valor da despesa: R$ ${expenseAmount.toFixed(2)}\n\n` +
+          `Deseja continuar mesmo assim?`
+        );
+        
+        if (!result) {
+          return; // Usuário cancelou a operação
+        }
+      }
+      
+      // Se o saldo vai ficar negativo mas dentro do limite do cheque especial, mostrar alerta informativo
+      else if (currentBalance - netExpense < 0) {
+        // Usar uma abordagem mais simples com alert em vez do toast warning para evitar problemas de tipagem
+        alert('⚠️ Atenção: Esta despesa irá utilizar seu limite de cheque especial.');
+      }
+    }
+    
     const formData = new FormData();
     
     // Add user ID
