@@ -332,7 +332,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                             <td className="py-3 px-4 text-right">
                               {transaction.attachment && (
                                 <a 
-                                  href={`/${transaction.attachment}`} 
+                                  href={`/uploads/${transaction.attachment.split('/').pop()}`} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="inline-flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium text-blue-600 hover:bg-blue-50 mr-1"
