@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
-import { Pencil, Trash2, Plus, Calendar, ArrowUpCircle, ArrowDownCircle, FileText } from 'lucide-react';
+import { Pencil, Trash2, Plus, Calendar, ArrowUpCircle, ArrowDownCircle, FileText, Eye } from 'lucide-react';
+import { AttachmentViewerModal } from "@/components/modals/AttachmentViewerModal";
 import ExpenseModal from '@/components/modals/ExpenseModal';
 import IncomeModal from '@/components/modals/IncomeModal';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -34,6 +35,8 @@ export default function Recurring({ userId }: RecurringProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [attachmentViewerOpen, setAttachmentViewerOpen] = useState(false);
+  const [selectedAttachmentPath, setSelectedAttachmentPath] = useState('');
   
   // Fetch recurring transactions
   const { data: recurringTransactions, isLoading } = useQuery({

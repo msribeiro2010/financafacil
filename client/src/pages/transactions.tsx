@@ -596,6 +596,13 @@ export default function Transactions({ userId }: TransactionsProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AttachmentViewerModal
+        isOpen={attachmentViewerOpen}
+        onClose={() => setAttachmentViewerOpen(false)}
+        attachmentPath={selectedAttachmentPath}
+        title="Visualizar Anexo"
+      />
     </>
   );
 }
