@@ -206,19 +206,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const data = req.body;
       
+      console.log("Transaction update data received:", data);
+      
       // Convert string values to appropriate types
-      const transactionData: any = { ...data };
+      const transactionData: any = {};
       
       if (data.userId) transactionData.userId = parseInt(data.userId);
+      if (data.type) transactionData.type = data.type;
+      if (data.description) transactionData.description = data.description;
+      if (data.amount) transactionData.amount = data.amount;
       if (data.categoryId) transactionData.categoryId = parseInt(data.categoryId);
       if (data.date) transactionData.date = data.date; // Keep as string
       if (data.isRecurring !== undefined) transactionData.isRecurring = data.isRecurring === "true";
       if (data.recurringId) transactionData.recurringId = parseInt(data.recurringId);
       if (req.file) transactionData.attachment = req.file.path;
       
+      console.log("Processed transaction data:", transactionData);
+      
       const transaction = await storage.updateTransaction(id, transactionData);
       res.json(transaction);
     } catch (error) {
+      console.error("Error updating transaction:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
