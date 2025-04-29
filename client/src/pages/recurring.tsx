@@ -571,6 +571,13 @@ export default function Recurring({ userId }: RecurringProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AttachmentViewerModal
+        isOpen={attachmentViewerOpen}
+        onClose={() => setAttachmentViewerOpen(false)}
+        attachmentPath={selectedAttachmentPath}
+        title="Visualizar Anexo"
+      />
     </>
   );
 }
