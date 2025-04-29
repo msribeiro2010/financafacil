@@ -16,45 +16,25 @@ import { useState, useEffect } from "react";
 
 function App() {
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [, setLocation] = useLocation();
+  const [showLogin, setShowLogin] = useState(true); // Inicialmente, mostra a tela de login
+  const [location, setLocation] = useLocation();
   
-  useEffect(() => {
-    // Check if user is already logged in
-    const checkLoginStatus = async () => {
-      try {
-        // Try to get the current user's session
-        const response = await fetch('/api/user/session');
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Session check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    checkLoginStatus();
-  }, []);
-  
+  // Função para lidar com o login bem-sucedido
   const handleLogin = (userData: any) => {
     setUser(userData);
+    setShowLogin(false); // Esconde a tela de login após o login bem-sucedido
+    setLocation('/');
   };
   
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/user/logout', { method: 'POST' });
-      setUser(null);
-      setLocation('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  // Função para lidar com o logout
+  const handleLogout = () => {
+    setUser(null);
+    setShowLogin(true); // Mostra a tela de login após o logout
+    setLocation('/'); // Volta para a página inicial
   };
   
-  if (loading) {
+  // Exibe um indicador de carregamento enquanto o app inicializa
+  if (user === null && !showLogin) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-100">
         <div className="text-center">
@@ -65,7 +45,8 @@ function App() {
     );
   }
   
-  if (!user) {
+  // Se showLogin for true, exibe a tela de login
+  if (showLogin) {
     return (
       <QueryClientProvider client={queryClient}>
         <Toaster />

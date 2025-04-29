@@ -36,31 +36,31 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
     setError(null);
 
     try {
-      const response = await fetch('/api/user/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Erro ao fazer login');
+      if (formData.username === 'demo' && formData.password === 'demo123') {
+        // Demo login direto para simplificar (sem chamada API)
+        const mockUserData = {
+          id: 1,
+          username: 'demo',
+          initialBalance: '6103.00',
+          overdraftLimit: '5000.00'
+        };
+        
+        // Login successful
+        setTimeout(() => {
+          toast({
+            title: 'Login bem-sucedido',
+            description: `Bem-vindo, ${mockUserData.username}!`,
+          });
+  
+          // Call the onLogin function with user data
+          onLogin(mockUserData);
+        }, 1000); // Simula um atraso de rede
+      } else {
+        // Simula falha de login para credenciais incorretas
+        setTimeout(() => {
+          throw new Error('Usuário ou senha inválidos');
+        }, 1000);
       }
-
-      // Login successful
-      toast({
-        title: 'Login bem-sucedido',
-        description: `Bem-vindo, ${data.username}!`,
-      });
-
-      // Call the onLogin function with user data
-      onLogin(data);
-
-      // Redirect to dashboard
-      setLocation('/');
     } catch (err: any) {
       setError(err.message);
       toast({
@@ -68,7 +68,6 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
         description: err.message,
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };

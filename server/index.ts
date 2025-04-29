@@ -1,5 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+
+// Extend express-session with our custom data
+declare module "express-session" {
+  export interface SessionData {
+    userId?: number;
+  }
+}
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
