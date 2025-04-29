@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
-import { Pencil, Trash2, Plus, Search, ArrowUpDown, Filter, CalendarIcon, FileText, ExternalLink } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ArrowUpDown, Filter, CalendarIcon, FileText, ExternalLink, Eye } from 'lucide-react';
+import { AttachmentViewerModal } from '@/components/modals/AttachmentViewerModal';
 import ExpenseModal from '@/components/modals/ExpenseModal';
 import IncomeModal from '@/components/modals/IncomeModal';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -46,6 +47,8 @@ export default function Transactions({ userId }: TransactionsProps) {
     end: endOfMonth(new Date())
   });
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [attachmentViewerOpen, setAttachmentViewerOpen] = useState(false);
+  const [selectedAttachmentPath, setSelectedAttachmentPath] = useState('');
   
   // Fetch transactions
   const { data: transactions, isLoading } = useQuery({
@@ -331,15 +334,18 @@ export default function Transactions({ userId }: TransactionsProps) {
                             </td>
                             <td className="py-3 px-4 text-right">
                               {transaction.attachment && (
-                                <a 
-                                  href={`/uploads/${transaction.attachment.split('/').pop()}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium text-blue-600 hover:bg-blue-50 mr-1"
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 mr-1"
+                                  onClick={() => {
+                                    setSelectedAttachmentPath(`/uploads/${transaction.attachment.split('/').pop()}`);
+                                    setAttachmentViewerOpen(true);
+                                  }}
                                   title="Visualizar anexo/boleto"
                                 >
-                                  <FileText className="h-4 w-4" />
-                                </a>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                               )}
                               <Button
                                 variant="ghost"
