@@ -1,10 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session configuration
+app.use(session({
+  secret: 'financafacil-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // set to true if using https
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();

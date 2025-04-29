@@ -101,12 +101,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log("Login successful");
+      
+      // Store user ID in session
+      if (req.session) {
+        req.session.userId = user.id;
+      }
+      
       // Don't send password
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Erro ao fazer login" });
+    }
+  });
+  
+  app.post("/api/user/logout", (req, res) => {
+    try {
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).json({ message: "Erro ao fazer logout" });
+          }
+          res.clearCookie('connect.sid');
+          res.json({ success: true });
+        });
+      } else {
+        res.json({ success: true });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+  
+  app.get("/api/user/session", async (req, res) => {
+    try {
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({ message: "Não autenticado" });
+      }
+      
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Don't send password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Session check error:", error);
+      res.status(500).json({ message: "Erro ao buscar usuário" });
     }
   });
 
