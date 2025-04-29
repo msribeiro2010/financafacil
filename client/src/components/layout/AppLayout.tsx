@@ -2,10 +2,13 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import { useLocation } from 'wouter';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Settings, LogOut, User } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
   user: any;
+  onLogout?: () => void;
 }
 
 const getPageTitle = (path: string) => {
@@ -25,9 +28,19 @@ const getPageTitle = (path: string) => {
   }
 };
 
-export default function AppLayout({ children, user }: AppLayoutProps) {
-  const [location] = useLocation();
+export default function AppLayout({ children, user, onLogout }: AppLayoutProps) {
+  const [location, setLocation] = useLocation();
   const pageTitle = getPageTitle(location);
+  
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    }
+  };
+  
+  const goToSettings = () => {
+    setLocation('/settings');
+  };
   
   return (
     <div className="flex h-screen overflow-hidden">
@@ -48,16 +61,59 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
             <button className="p-2 rounded-full hover:bg-slate-100">
               <i className="ri-notification-3-line text-slate-600"></i>
             </button>
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
-                <span className="text-sm font-medium">
-                  {user?.username?.charAt(0).toUpperCase() || 'U'}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center space-x-2 outline-none">
+                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
+                  <span className="text-sm font-medium">
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <span className="hidden md:inline-block text-sm font-medium">
+                  {user?.username || 'Usuário'}
                 </span>
-              </div>
-              <span className="hidden md:inline-block text-sm font-medium">
-                {user?.username || 'Usuário'}
-              </span>
-            </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="ml-1 h-4 w-4 text-muted-foreground hidden md:block"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white">
+                    <span className="text-md font-medium">
+                      {user?.username?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col space-y-0.5">
+                    <p className="text-sm font-medium">{user?.username || 'Usuário'}</p>
+                    <p className="text-xs text-muted-foreground">Conta demonstrativa</p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={goToSettings} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Meu perfil</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={goToSettings} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configurações</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-500 focus:text-rose-500">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sair</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         
