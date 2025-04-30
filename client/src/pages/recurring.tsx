@@ -308,7 +308,10 @@ export default function Recurring({ userId }: RecurringProps) {
                                       transaction.type === 'expense' ? 'text-destructive' : 'text-accent'
                                     }`}></i>
                                   </div>
-                                  <span>{transaction.description}</span>
+                                  <div>
+                                    <span>{transaction.description}</span>
+                                    <span className="text-xs text-slate-500 ml-2">(ID: {transaction.id})</span>
+                                  </div>
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-slate-600">
@@ -413,7 +416,10 @@ export default function Recurring({ userId }: RecurringProps) {
                                     <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 bg-green-100">
                                       <i className={`${transaction.category?.icon || 'ri-question-line'} text-accent`}></i>
                                     </div>
-                                    <span>{transaction.description}</span>
+                                    <div>
+                                      <span>{transaction.description}</span>
+                                      <span className="text-xs text-slate-500 ml-2">(ID: {transaction.id})</span>
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-slate-600">
@@ -501,7 +507,10 @@ export default function Recurring({ userId }: RecurringProps) {
                                     <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 bg-red-100">
                                       <i className={`${transaction.category?.icon || 'ri-question-line'} text-destructive`}></i>
                                     </div>
-                                    <span>{transaction.description}</span>
+                                    <div>
+                                      <span>{transaction.description}</span>
+                                      <span className="text-xs text-slate-500 ml-2">(ID: {transaction.id})</span>
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-slate-600">
@@ -568,7 +577,7 @@ export default function Recurring({ userId }: RecurringProps) {
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar exclusão {deleteId ? `da transação #${deleteId}` : ''}</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir esta transação recorrente? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
