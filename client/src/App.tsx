@@ -12,29 +12,39 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import { useState, useEffect } from "react";
 
 function App() {
   const [user, setUser] = useState<any>(null);
-  const [showLogin, setShowLogin] = useState(true); // Inicialmente, mostra a tela de login
+  const [authState, setAuthState] = useState<'login' | 'register' | 'authenticated'>('login'); // Estados de autenticação
   const [location, setLocation] = useLocation();
   
   // Função para lidar com o login bem-sucedido
   const handleLogin = (userData: any) => {
     setUser(userData);
-    setShowLogin(false); // Esconde a tela de login após o login bem-sucedido
+    setAuthState('authenticated'); // Usuário autenticado
     setLocation('/');
   };
   
   // Função para lidar com o logout
   const handleLogout = () => {
     setUser(null);
-    setShowLogin(true); // Mostra a tela de login após o logout
+    setAuthState('login'); // Voltar para tela de login
     setLocation('/'); // Volta para a página inicial
   };
   
+  // Monitorar mudanças na URL para detectar /register
+  useEffect(() => {
+    if (location === '/register') {
+      setAuthState('register');
+    } else if (location === '/login') {
+      setAuthState('login');
+    }
+  }, [location]);
+  
   // Exibe um indicador de carregamento enquanto o app inicializa
-  if (user === null && !showLogin) {
+  if (user === null && authState === 'authenticated') {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-100">
         <div className="text-center">
@@ -45,12 +55,19 @@ function App() {
     );
   }
   
-  // Se showLogin for true, exibe a tela de login
-  if (showLogin) {
+  // Se não estiver autenticado, exibe tela de login ou registro
+  if (authState !== 'authenticated') {
     return (
       <QueryClientProvider client={queryClient}>
         <Toaster />
-        <Login onLogin={handleLogin} />
+        <Switch>
+          <Route path="/register">
+            <Register />
+          </Route>
+          <Route path="/">
+            <Login onLogin={handleLogin} />
+          </Route>
+        </Switch>
       </QueryClientProvider>
     );
   }

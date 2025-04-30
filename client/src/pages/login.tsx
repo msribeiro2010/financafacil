@@ -310,7 +310,14 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
             </div>
             <div className="text-center text-sm text-gray-500 mt-4">
               Não tem uma conta?{' '}
-              <a href="#" className="text-indigo-600 hover:text-indigo-800">
+              <a 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setLocation('/register');
+                }}
+                className="text-indigo-600 hover:text-indigo-800"
+              >
                 Registre-se
               </a>
             </div>
