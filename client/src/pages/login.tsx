@@ -60,8 +60,16 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
       } else {
         // Simula falha de login para credenciais incorretas
         setTimeout(() => {
-          throw new Error('Usuário ou senha inválidos');
+          const errorMsg = 'Usuário ou senha inválidos';
+          setError(errorMsg);
+          toast({
+            title: 'Erro de login',
+            description: errorMsg,
+            variant: 'destructive',
+          });
+          setIsLoading(false);
         }, 1000);
+        return; // Evita que o bloco catch seja executado
       }
     } catch (err: any) {
       setError(err.message);
