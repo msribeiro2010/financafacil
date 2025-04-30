@@ -140,20 +140,31 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteTransaction(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(transactions)
-      .where(eq(transactions.id, id))
-      .returning({ id: transactions.id });
-    
-    return !!deleted;
+    try {
+      // Para SQLite, precisamos modificar a abordagem
+      // Primeiro buscamos a transação para verificar se existe
+      const transaction = await this.getTransactionById(id);
+      
+      if (!transaction) {
+        return false;
+      }
+      
+      // Executamos a exclusão sem tentar retornar dados
+      db.delete(transactions)
+        .where(eq(transactions.id, id))
+        .run();
+      
+      // Em SQLite, assumimos que a exclusão foi bem-sucedida se o registro existia
+      return true;
+    } catch (error) {
+      console.error(`Erro ao excluir transação ${id}:`, error);
+      throw error;
+    }
   }
   
   // Recurring transaction methods
   async getRecurringTransactions(userId: number): Promise<RecurringTransaction[]> {
-    return db.select()
-      .from(recurringTransactions)
-      .where(eq(recurringTransactions.userId, userId))
-      .orderBy(recurringTransactions.startDate);
+    return db.getRecurringTransactions(userId);
   }
   
   async getRecurringTransactionById(id: number): Promise<RecurringTransaction | undefined> {
@@ -189,12 +200,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteRecurringTransaction(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(recurringTransactions)
-      .where(eq(recurringTransactions.id, id))
-      .returning({ id: recurringTransactions.id });
-    
-    return !!deleted;
+    try {
+      return db.deleteRecurringTransaction(id);
+    } catch (error) {
+      console.error(`Erro ao excluir transação recorrente ${id}:`, error);
+      throw error;
+    }
   }
   
   // Summary and reporting
