@@ -37,48 +37,38 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
     setIsLoading(true);
     setError(null);
 
-    try {
-      if (formData.username === 'demo' && formData.password === 'demo123') {
-        // Demo login direto para simplificar (sem chamada API)
-        const mockUserData = {
-          id: 1,
-          username: 'demo',
-          initialBalance: '6103.00',
-          overdraftLimit: '5000.00'
-        };
-        
-        // Login successful
-        setTimeout(() => {
-          toast({
-            title: 'Login bem-sucedido',
-            description: `Bem-vindo, ${mockUserData.username}!`,
-          });
-  
-          // Call the onLogin function with user data
-          onLogin(mockUserData);
-        }, 1000); // Simula um atraso de rede
-      } else {
-        // Simula falha de login para credenciais incorretas
-        setTimeout(() => {
-          const errorMsg = 'Usuário ou senha inválidos';
-          setError(errorMsg);
-          toast({
-            title: 'Erro de login',
-            description: errorMsg,
-            variant: 'destructive',
-          });
-          setIsLoading(false);
-        }, 1000);
-        return; // Evita que o bloco catch seja executado
-      }
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        title: 'Erro de login',
-        description: err.message,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
+    // Versão simplificada sem try/catch para evitar erros
+    if (formData.username === 'demo' && formData.password === 'demo123') {
+      // Demo login direto para simplificar (sem chamada API)
+      const mockUserData = {
+        id: 1,
+        username: 'demo',
+        initialBalance: '6103.00',
+        overdraftLimit: '5000.00'
+      };
+      
+      // Login successful
+      setTimeout(() => {
+        toast({
+          title: 'Login bem-sucedido',
+          description: `Bem-vindo, ${mockUserData.username}!`,
+        });
+
+        // Call the onLogin function with user data
+        onLogin(mockUserData);
+      }, 1000); // Simula um atraso de rede
+    } else {
+      // Simula falha de login para credenciais incorretas
+      setTimeout(() => {
+        const errorMsg = 'Usuário ou senha inválidos';
+        setError(errorMsg);
+        toast({
+          title: 'Erro de login',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }, 1000);
     }
   };
   
