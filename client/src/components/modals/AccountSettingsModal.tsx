@@ -45,11 +45,13 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
   // Update account settings mutation
   const updateSettings = useMutation({
     mutationFn: async (data: z.infer<typeof accountSettingsSchema>) => {
+      console.log('Enviando dados para atualização:', data);
       return apiRequest('PATCH', `/api/user/${userId}/settings`, data);
     },
     onSuccess: async (response) => {
       // Atualiza o cache imediatamente com os novos dados
       const updatedUser = await response.json();
+      console.log('Usuário atualizado:', updatedUser);
       
       // Força a atualização do cache do usuário
       queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
@@ -63,6 +65,7 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
           currentBalance: parseFloat(updatedUser.initialBalance || '0'),
           // Atualiza outros valores que dependam do saldo inicial se necessário
         };
+        console.log('Resumo atualizado:', updatedSummary);
         queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
       }
       

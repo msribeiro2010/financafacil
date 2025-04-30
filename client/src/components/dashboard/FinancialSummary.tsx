@@ -12,7 +12,10 @@ interface FinancialSummaryProps {
 export function FinancialSummary({ userId }: FinancialSummaryProps) {
   const { data: summary, isLoading } = useQuery<any>({
     queryKey: [`/api/summary/${userId}`],
-    refetchInterval: 5000, // Atualiza a cada 5 segundos para garantir dados atualizados
+    refetchInterval: 2000, // Atualiza a cada 2 segundos para garantir dados atualizados
+    // Força a reexecução quando o componente é montado, importante para atualizações
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
   
   const renderSkeleton = () => (
