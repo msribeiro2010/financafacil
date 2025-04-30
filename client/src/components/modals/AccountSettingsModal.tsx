@@ -50,7 +50,7 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
       // Atualiza o cache imediatamente com os novos dados
       const updatedUser = await response.json();
       
-      // Atualiza o cache do usuário
+      // Força a atualização do cache do usuário
       queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
       
       // Atualiza imediatamente o resumo financeiro
@@ -65,8 +65,8 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
         queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
       }
       
-      // Invalida as queries para garantir atualizações futuras
-      queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+      // Invalida e força uma atualização completa de todas as queries relacionadas
+      queryClient.invalidateQueries();
       
       toast({
         title: 'Sucesso',

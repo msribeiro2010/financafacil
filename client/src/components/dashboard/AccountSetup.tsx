@@ -4,7 +4,7 @@ import { Edit, WalletCards, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AccountSetupProps {
@@ -13,7 +13,9 @@ interface AccountSetupProps {
 }
 
 export function AccountSetup({ userId, onEdit }: AccountSetupProps) {
-  const { data: user, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  
+  const { data: user, isLoading } = useQuery<any>({
     queryKey: [`/api/user/${userId}`],
     refetchInterval: 5000, // Atualiza a cada 5 segundos para garantir dados atualizados
   });
