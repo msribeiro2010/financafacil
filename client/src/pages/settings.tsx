@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -27,6 +28,7 @@ interface SettingsProps {
 
 export default function Settings({ userId, user }: SettingsProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [accountSettingsModalOpen, setAccountSettingsModalOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   
@@ -39,6 +41,10 @@ export default function Settings({ userId, user }: SettingsProps) {
   });
   
   const handleEditAccountSettings = () => {
+    // Força uma atualização dos dados do usuário antes de abrir o modal
+    // para garantir que os valores exibidos são os mais recentes
+    queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+    queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
     setAccountSettingsModalOpen(true);
   };
   

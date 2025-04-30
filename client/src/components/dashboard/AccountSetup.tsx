@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Edit, WalletCards, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,17 @@ interface AccountSetupProps {
 export function AccountSetup({ userId, onEdit }: AccountSetupProps) {
   const queryClient = useQueryClient();
   
-  const { data: user, isLoading } = useQuery<any>({
+  const { data: user, isLoading, refetch } = useQuery<any>({
     queryKey: [`/api/user/${userId}`],
-    refetchInterval: 5000, // Atualiza a cada 5 segundos para garantir dados atualizados
+    refetchInterval: 2000, // Atualiza a cada 2 segundos para garantir dados atualizados
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
+  
+  // Força uma atualização a cada vez que o componente é renderizado
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
   
   if (isLoading) {
     return (
