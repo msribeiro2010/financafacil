@@ -22,10 +22,15 @@ export function AccountSetup({ userId, onEdit }: AccountSetupProps) {
     refetchOnWindowFocus: true,
   });
   
-  // Força uma atualização a cada vez que o componente é renderizado
+  // Força uma atualização quando o componente é montado
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    // Evitar loops infinitos garantindo que refetch seja chamado apenas uma vez no mount
+    const timer = setTimeout(() => {
+      refetch();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   if (isLoading) {
     return (

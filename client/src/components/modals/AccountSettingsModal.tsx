@@ -49,35 +49,40 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
       return apiRequest('PATCH', `/api/user/${userId}/settings`, data);
     },
     onSuccess: async (response) => {
-      // Atualiza o cache imediatamente com os novos dados
-      const updatedUser = await response.json();
-      console.log('Usuário atualizado:', updatedUser);
-      
-      // Força a atualização do cache do usuário
-      queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
-      
-      // Atualiza imediatamente o resumo financeiro
-      const summary = queryClient.getQueryData([`/api/summary/${userId}`]);
-      if (summary) {
-        // Atualiza o saldo atual baseado nas novas configurações
-        const updatedSummary = {
-          ...summary,
-          currentBalance: parseFloat(updatedUser.initialBalance || '0'),
-          // Atualiza outros valores que dependam do saldo inicial se necessário
-        };
-        console.log('Resumo atualizado:', updatedSummary);
-        queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
+      try {
+        // Atualiza o cache imediatamente com os novos dados
+        const updatedUser = await response.json();
+        console.log('Usuário atualizado:', updatedUser);
+        
+        // Força a atualização do cache do usuário
+        queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
+        
+        // Atualiza imediatamente o resumo financeiro
+        const summary = queryClient.getQueryData([`/api/summary/${userId}`]);
+        if (summary) {
+          // Atualiza o saldo atual baseado nas novas configurações
+          const updatedSummary = {
+            ...summary,
+            currentBalance: parseFloat(updatedUser.initialBalance || '0'),
+            // Atualiza outros valores que dependam do saldo inicial se necessário
+          };
+          console.log('Resumo atualizado:', updatedSummary);
+          queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
+        }
+        
+        // Invalida apenas as queries específicas para evitar loops
+        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+        queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+        
+        toast({
+          title: 'Sucesso',
+          description: 'Configurações atualizadas com sucesso!',
+        });
+        
+        onClose();
+      } catch (error) {
+        console.error('Erro ao processar resposta:', error);
       }
-      
-      // Invalida e força uma atualização completa de todas as queries relacionadas
-      queryClient.invalidateQueries();
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações atualizadas com sucesso!',
-      });
-      
-      onClose();
     },
     onError: () => {
       toast({
