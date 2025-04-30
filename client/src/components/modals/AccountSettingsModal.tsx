@@ -19,6 +19,7 @@ interface AccountSettingsModalProps {
   user: any;
 }
 
+// Componente de configurações da conta que permite ajustar saldo inicial e limite de cheque especial
 export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountSettingsModalProps) {
   const { toast } = useToast();
   
