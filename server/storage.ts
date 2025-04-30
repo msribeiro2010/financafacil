@@ -5,7 +5,7 @@ import {
   categories, Category, InsertCategory, 
   TransactionSummary, CategorySummary
 } from "@shared/schema";
-import { db } from "./db";
+import { dbWithExtensions as db } from "./db";
 import { eq, and, gte, lte, desc, count } from "drizzle-orm";
 
 // Define storage interface
@@ -44,26 +44,28 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return db.getUser(id);
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
     console.log(`Looking for user with username: ${username}`);
-    const result = await db.select().from(users).where(eq(users.username, username));
-    console.log(`Found users:`, result);
-    const [user] = result;
+    const user = db.getUserByUsername(username);
+    console.log(`Found user:`, user);
     return user;
   }
   
   async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
+    const newUser = db.createUser(user);
     
-    // If this is the first user, initialize the database
-    const userCount = await db.select({ count: count() }).from(users);
-    if (userCount[0].count === 1) {
-      await this.initializeDefaultCategories();
-      await this.addDemoTransactions(newUser.id);
+    // Se for o primeiro usuário, inicialize o banco de dados
+    try {
+      const userCount = await db.select('SELECT COUNT(*) as count FROM users') as any[];
+      if (userCount && userCount.length > 0 && userCount[0].count === 1) {
+        await this.initializeDefaultCategories();
+        await this.addDemoTransactions(newUser.id);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar quantidade de usuários:', error);
     }
     
     return newUser;
