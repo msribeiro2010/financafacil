@@ -209,6 +209,7 @@ export class DatabaseStorage implements IStorage {
     
     // Parse numeric values
     const initialBalance = parseFloat(user.initialBalance as string);
+    const overdraftLimit = parseFloat(user.overdraftLimit as string);
     
     let totalIncome = 0;
     let totalExpenses = 0;
@@ -223,6 +224,8 @@ export class DatabaseStorage implements IStorage {
     });
     
     const currentBalance = initialBalance + totalIncome - totalExpenses;
+    // Se o saldo for negativo mas estiver dentro do limite do cheque especial,
+    // consideramos que estamos usando o cheque especial
     
     // For projected balance, include upcoming recurring transactions
     let projectedBalance = currentBalance;

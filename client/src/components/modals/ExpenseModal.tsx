@@ -160,10 +160,10 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   // Form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Verificar se a despesa não ultrapassa o saldo + limite de cheque especial
-    if (userData && financialSummary && !isEditMode) {
+    if (userData && financialSummary) {
       const expenseAmount = parseFloat(values.amount);
       const currentBalance = financialSummary.currentBalance;
-      const overdraftLimit = parseFloat(userData.overdraftLimit);
+      const overdraftLimit = parseFloat(userData.overdraftLimit || '0');
       const availableTotal = currentBalance + overdraftLimit;
       
       // Se for edição de uma despesa existente, considerar o valor anterior
