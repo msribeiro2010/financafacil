@@ -38,11 +38,11 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
     setError(null);
 
     // Versão simplificada sem try/catch para evitar erros
-    if (formData.username === 'demo' && formData.password === 'demo123') {
+    if (formData.username === 'Marcelo' && formData.password === 'demo123') {
       // Demo login direto para simplificar (sem chamada API)
       const mockUserData = {
         id: 1,
-        username: 'demo',
+        username: 'Marcelo',
         initialBalance: '6103.00',
         overdraftLimit: '5000.00'
       };
@@ -121,10 +121,10 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
           // Demo login para contornar a restrição de domínio
           const mockUserData = {
             id: 2,
-            username: 'Usuário Google (Demo)',
-            email: 'usuario.google@exemplo.com',
-            initialBalance: '0.00',
-            overdraftLimit: '0.00',
+            username: 'Marcelo (Google)',
+            email: 'marcelo@exemplo.com',
+            initialBalance: '8500.00',
+            overdraftLimit: '3000.00',
             photoURL: null,
             uid: 'google-demo-uid'
           };
