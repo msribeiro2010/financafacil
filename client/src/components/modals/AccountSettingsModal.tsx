@@ -53,7 +53,19 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
       // Atualiza o cache do usuário
       queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
       
-      // Precisamos atualizar também o resumo financeiro
+      // Atualiza imediatamente o resumo financeiro
+      const summary = queryClient.getQueryData([`/api/summary/${userId}`]);
+      if (summary) {
+        // Atualiza o saldo atual baseado nas novas configurações
+        const updatedSummary = {
+          ...summary,
+          currentBalance: parseFloat(updatedUser.initialBalance || '0'),
+          // Atualiza outros valores que dependam do saldo inicial se necessário
+        };
+        queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
+      }
+      
+      // Invalida as queries para garantir atualizações futuras
       queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
       
       toast({
