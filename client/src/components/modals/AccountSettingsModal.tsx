@@ -110,13 +110,15 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
                   <FormLabel>Saldo Inicial (R$)</FormLabel>
                   <FormControl>
                     <Input 
+                      type="text"
                       placeholder="0,00" 
                       {...field} 
                       onChange={(e) => {
                         // Format as currency
                         const value = e.target.value.replace(/\D/g, '');
-                        const formattedValue = (parseInt(value) / 100).toFixed(2);
-                        field.onChange(formattedValue === 'NaN' ? '0.00' : formattedValue);
+                        const numericValue = value === '' ? 0 : parseInt(value);
+                        const formattedValue = (numericValue / 100).toFixed(2);
+                        field.onChange(formattedValue);
                       }}
                     />
                   </FormControl>
@@ -136,13 +138,15 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
                   <FormLabel>Limite de Cheque Especial (R$)</FormLabel>
                   <FormControl>
                     <Input 
+                      type="text"
                       placeholder="0,00" 
                       {...field} 
                       onChange={(e) => {
                         // Format as currency
                         const value = e.target.value.replace(/\D/g, '');
-                        const formattedValue = (parseInt(value) / 100).toFixed(2);
-                        field.onChange(formattedValue === 'NaN' ? '0.00' : formattedValue);
+                        const numericValue = value === '' ? 0 : parseInt(value);
+                        const formattedValue = (numericValue / 100).toFixed(2);
+                        field.onChange(formattedValue);
                       }}
                     />
                   </FormControl>

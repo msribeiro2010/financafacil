@@ -28,19 +28,19 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   const isEditMode = !!transaction;
   
   // Get categories
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
+  const { data: categories, isLoading: categoriesLoading } = useQuery<any>({
     queryKey: ['/api/categories?type=expense'],
     enabled: isOpen,
   });
   
   // Get user data for overdraft limit check
-  const { data: userData } = useQuery({
+  const { data: userData } = useQuery<any>({
     queryKey: [`/api/user/${userId}`],
     enabled: isOpen,
   });
   
   // Get financial summary for current balance
-  const { data: financialSummary } = useQuery({
+  const { data: financialSummary } = useQuery<any>({
     queryKey: [`/api/summary/${userId}`],
     enabled: isOpen,
   });
