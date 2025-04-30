@@ -46,13 +46,21 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
     mutationFn: async (data: z.infer<typeof accountSettingsSchema>) => {
       return apiRequest('PATCH', `/api/user/${userId}/settings`, data);
     },
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      // Atualiza o cache imediatamente com os novos dados
+      const updatedUser = await response.json();
+      
+      // Atualiza o cache do usuário
+      queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
+      
+      // Precisamos atualizar também o resumo financeiro
+      queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+      
       toast({
         title: 'Sucesso',
         description: 'Configurações atualizadas com sucesso!',
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+      
       onClose();
     },
     onError: () => {

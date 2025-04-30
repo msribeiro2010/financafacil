@@ -15,6 +15,7 @@ interface AccountSetupProps {
 export function AccountSetup({ userId, onEdit }: AccountSetupProps) {
   const { data: user, isLoading } = useQuery({
     queryKey: [`/api/user/${userId}`],
+    refetchInterval: 5000, // Atualiza a cada 5 segundos para garantir dados atualizados
   });
   
   if (isLoading) {
