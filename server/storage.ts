@@ -203,10 +203,14 @@ export class DatabaseStorage implements IStorage {
   
   async deleteRecurringTransaction(id: number): Promise<boolean> {
     try {
-      return db.deleteRecurringTransaction(id);
+      console.log(`Storage: Solicitada exclusão da transação recorrente ${id}`);
+      // Usamos nossa função especializada de exclusão no dbWithExtensions
+      const result = await dbWithExtensions.deleteRecurringTransaction(id);
+      console.log(`Storage: Resultado da exclusão: ${result ? 'sucesso' : 'falha'}`);
+      return result;
     } catch (error) {
-      console.error(`Erro ao excluir transação recorrente ${id}:`, error);
-      throw error;
+      console.error(`Storage: Erro ao excluir transação recorrente ${id}:`, error);
+      return false; // Retornamos false em vez de lançar erro para maior robustez
     }
   }
   

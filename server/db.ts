@@ -20,11 +20,13 @@ export const dbWithExtensions = {
   ...db,
   deleteRecurringTransaction: async (id: number): Promise<boolean> => {
     try {
-      // Tenta excluir a transação recorrente
-      const result = await pool.query('DELETE FROM recurring_transactions WHERE id = $1', [id]);
+      // Tenta excluir a transação recorrente com SQL bruto para maior confiabilidade
+      const result = await pool.query('DELETE FROM recurring_transactions WHERE id = $1 RETURNING id', [id]);
       
-      // Se pelo menos uma linha foi afetada, consideramos sucesso
-      return result.rowCount ? result.rowCount > 0 : false;
+      // Verificamos se a operação encontrou e excluiu algum registro
+      const success = result.rows && result.rows.length > 0;
+      console.log(`Exclusão da transação recorrente ${id}: ${success ? 'sucesso' : 'não encontrada'}`);
+      return success;
     } catch (error) {
       console.error(`Erro ao excluir transação recorrente ${id}:`, error);
       return false;
