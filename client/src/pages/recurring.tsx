@@ -46,13 +46,21 @@ export default function Recurring({ userId }: RecurringProps) {
   // Delete recurring transaction mutation
   const deleteRecurring = useMutation({
     mutationFn: async (id: number) => {
-      // Quando uma operação DELETE é bem-sucedida, o servidor retorna 204 No Content
-      // Não precisamos processar nenhum dado de resposta neste caso
-      const response = await apiRequest('DELETE', `/api/recurring/${id}`);
-      console.log('Delete response status:', response.status);
-      return response;
+      try {
+        console.log(`Tentando excluir a transação recorrente de ID ${id}`);
+        // Quando uma operação DELETE é bem-sucedida, o servidor retorna 204 No Content
+        // Não precisamos processar nenhum dado de resposta neste caso
+        const response = await apiRequest('DELETE', `/api/recurring/${id}`);
+        console.log(`Resposta da exclusão: Status ${response.status}`);
+        return response;
+      } catch (error) {
+        console.error(`Erro ao excluir transação recorrente ${id}:`, error);
+        throw error; // Relançar o erro para o onError lidar
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      console.log(`Exclusão bem-sucedida da transação recorrente ${id}`);
+      // Invalida a consulta para atualizar a lista
       queryClient.invalidateQueries({ queryKey: [`/api/recurring/${userId}`] });
       toast({
         title: "Transação recorrente excluída",
@@ -60,10 +68,11 @@ export default function Recurring({ userId }: RecurringProps) {
       });
       setDeleteId(null);
     },
-    onError: () => {
+    onError: (error, id) => {
+      console.error(`Erro no handler onError para exclusão da transação ${id}:`, error);
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao excluir a transação recorrente.",
+        title: "Erro ao excluir transação",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao excluir a transação recorrente.",
         variant: "destructive",
       });
       setDeleteId(null);
@@ -568,7 +577,13 @@ export default function Recurring({ userId }: RecurringProps) {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteId && deleteRecurring.mutate(deleteId)}
+              onClick={() => {
+                if (deleteId) {
+                  console.log(`Confirmando exclusão da transação recorrente ID: ${deleteId}`);
+                  deleteRecurring.mutate(deleteId);
+                }
+              }}
+              disabled={deleteRecurring.isPending}
             >
               {deleteRecurring.isPending ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>

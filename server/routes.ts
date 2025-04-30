@@ -386,15 +386,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/recurring/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log(`[DELETE /api/recurring/:id] Solicitação de exclusão para ID: ${id}`);
+      
+      // Verifica se o ID é válido
+      if (isNaN(id) || id <= 0) {
+        console.log(`[DELETE /api/recurring/:id] ID inválido: ${id}`);
+        return res.status(400).json({ message: "ID de transação recorrente inválido" });
+      }
+      
+      // Tenta excluir a transação recorrente
       const success = await storage.deleteRecurringTransaction(id);
+      console.log(`[DELETE /api/recurring/:id] Resultado da exclusão: ${success ? 'sucesso' : 'falha'}`);
       
       if (!success) {
         return res.status(404).json({ message: "Transação recorrente não encontrada" });
       }
       
+      console.log(`[DELETE /api/recurring/:id] Transação ${id} excluída com sucesso`);
       res.status(204).end();
     } catch (error) {
-      res.status(500).json({ message: "Erro ao excluir transação recorrente" });
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error(`[DELETE /api/recurring/:id] Erro: ${errorMessage}`, error);
+      res.status(500).json({ message: "Erro ao excluir transação recorrente", error: errorMessage });
     }
   });
 
