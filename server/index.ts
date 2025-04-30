@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import createMemoryStore from "memorystore";
 
 // Extend express-session with our custom data
 declare module "express-session" {
@@ -10,6 +11,8 @@ declare module "express-session" {
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+const MemoryStore = createMemoryStore(session);
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -19,7 +22,13 @@ app.use(session({
   secret: 'financafacil-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false } // set to true if using https
+  cookie: { 
+    secure: false, // set to true if using https
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  store: new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  })
 }));
 
 app.use((req, res, next) => {
