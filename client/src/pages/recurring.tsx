@@ -46,7 +46,11 @@ export default function Recurring({ userId }: RecurringProps) {
   // Delete recurring transaction mutation
   const deleteRecurring = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/recurring/${id}`);
+      // Quando uma operação DELETE é bem-sucedida, o servidor retorna 204 No Content
+      // Não precisamos processar nenhum dado de resposta neste caso
+      const response = await apiRequest('DELETE', `/api/recurring/${id}`);
+      console.log('Delete response status:', response.status);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/recurring/${userId}`] });

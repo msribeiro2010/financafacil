@@ -204,10 +204,31 @@ export class DatabaseStorage implements IStorage {
   async deleteRecurringTransaction(id: number): Promise<boolean> {
     try {
       console.log(`Storage: Solicitada exclusão da transação recorrente ${id}`);
-      // Usamos nossa função especializada de exclusão no dbWithExtensions
-      const result = await dbWithExtensions.deleteRecurringTransaction(id);
-      console.log(`Storage: Resultado da exclusão: ${result ? 'sucesso' : 'falha'}`);
-      return result;
+      
+      // Verifica primeiro se a transação existe
+      const transaction = await this.getRecurringTransactionById(id);
+      if (!transaction) {
+        console.log(`Storage: Transação recorrente ${id} não encontrada`);
+        return false;
+      }
+      
+      // Usa SQL nativo para excluir a transação recorrente
+      const query = 'DELETE FROM recurring_transactions WHERE id = $1 RETURNING id';
+      console.log(`Storage: Executando SQL: ${query}`);
+      
+      try {
+        // Usa a instância pool do db.ts para executar a query
+        const { pool } = await import('./db');
+        const result = await pool.query(query, [id]);
+        
+        // Verifica se alguma linha foi afetada
+        const success = result.rows && result.rows.length > 0;
+        console.log(`Storage: Resultado da exclusão: ${success ? 'sucesso' : 'falha'}`);
+        return success;
+      } catch (dbError) {
+        console.error(`Storage: Erro SQL ao excluir transação recorrente ${id}:`, dbError);
+        return false;
+      }
     } catch (error) {
       console.error(`Storage: Erro ao excluir transação recorrente ${id}:`, error);
       return false; // Retornamos false em vez de lançar erro para maior robustez
