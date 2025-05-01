@@ -186,16 +186,32 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
                   className="h-7 px-2" 
                   title="Editar configurações da conta"
                   onClick={() => {
-                    // Prompt para o usuário inserir o saldo inicial
-                    const initialBalance = prompt('Informe o saldo inicial (ex: 1500.50):');
+                    // Obter o valor atual para exibir como padrão no prompt
+                    const currentInitialBalance = user?.initialBalance || user?.initial_balance || '0';
+                    const currentOverdraftLimit = user?.overdraftLimit || user?.overdraft_limit || '0';
+                    
+                    // Prompt para o usuário inserir o saldo inicial (mostrando o valor atual)
+                    const initialBalance = prompt(`Informe o saldo inicial (atual: R$ ${currentInitialBalance}):`);
                     if (initialBalance !== null) {
-                      // Prompt para o usuário inserir o limite de cheque especial
-                      const overdraftLimit = prompt('Informe o limite de cheque especial (ex: 1000.00):');
+                      // Prompt para o usuário inserir o limite de cheque especial (mostrando o valor atual)
+                      const overdraftLimit = prompt(`Informe o limite de cheque especial (atual: R$ ${currentOverdraftLimit}):`);
                       if (overdraftLimit !== null) {
+                        // Preparar os dados de atualização - usa os valores existentes se o usuário deixou em branco
+                        const updateData = {
+                          initialBalance: initialBalance.trim() === '' ? currentInitialBalance : formatMonetaryValue(initialBalance),
+                          overdraftLimit: overdraftLimit.trim() === '' ? currentOverdraftLimit : formatMonetaryValue(overdraftLimit)
+                        };
+                        
+                        console.log('Enviando atualização de configurações:', updateData);
+                        
                         // Atualiza as configurações com os valores informados pelo usuário
-                        updateUserSettings.mutate({
-                          initialBalance: formatMonetaryValue(initialBalance),
-                          overdraftLimit: formatMonetaryValue(overdraftLimit)
+                        updateUserSettings.mutate(updateData, {
+                          onSuccess: () => {
+                            // Força a releitura dos dados do usuário e do resumo
+                            setTimeout(() => {
+                              queryClient.invalidateQueries();
+                            }, 500);
+                          }
                         });
                       }
                     }

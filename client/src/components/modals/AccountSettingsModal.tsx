@@ -19,16 +19,41 @@ interface AccountSettingsModalProps {
   user: any;
 }
 
+// Função auxiliar para formatar valores monetários
+const formatMonetaryValue = (value: string): string => {
+  // Substitui vírgula por ponto
+  let formatted = value.replace(',', '.');
+  
+  // Verifica se é um número válido
+  if (isNaN(parseFloat(formatted))) {
+    return '0.00';
+  }
+  
+  // Garante que o valor tenha duas casas decimais
+  return parseFloat(formatted).toFixed(2);
+};
+
 // Componente de configurações da conta que permite ajustar saldo inicial e limite de cheque especial
 export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountSettingsModalProps) {
   const { toast } = useToast();
+  
+  // Obtém valores atuais do usuário considerando possíveis formatos (snake_case ou camelCase)
+  const getCurrentInitialBalance = () => {
+    const value = user?.initialBalance || user?.initial_balance || '0';
+    return formatMonetaryValue(value);
+  };
+  
+  const getCurrentOverdraftLimit = () => {
+    const value = user?.overdraftLimit || user?.overdraft_limit || '0';
+    return formatMonetaryValue(value);
+  };
   
   // Form initialization
   const form = useForm<z.infer<typeof accountSettingsSchema>>({
     resolver: zodResolver(accountSettingsSchema),
     defaultValues: {
-      initialBalance: user?.initialBalance || '0',
-      overdraftLimit: user?.overdraftLimit || '0',
+      initialBalance: getCurrentInitialBalance(),
+      overdraftLimit: getCurrentOverdraftLimit(),
     },
   });
   
@@ -36,11 +61,11 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
   useEffect(() => {
     if (user) {
       form.reset({
-        initialBalance: user.initialBalance || '0',
-        overdraftLimit: user.overdraftLimit || '0',
+        initialBalance: getCurrentInitialBalance(),
+        overdraftLimit: getCurrentOverdraftLimit(),
       });
     }
-  }, [user, form]);
+  }, [user]);
   
   // Update account settings mutation
   const updateSettings = useMutation({
@@ -50,7 +75,7 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
     },
     onSuccess: async (response) => {
       try {
-        // Atualiza o cache imediatamente com os novos dados
+        // Tenta obter os dados do usuário da resposta
         const updatedUser = await response.json();
         console.log('Usuário atualizado:', updatedUser);
         
@@ -66,9 +91,14 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
         // Adapta o objeto do usuário para garantir a consistência de nomenclatura
         const normalizedUser = {
           ...updatedUser,
-          initialBalance: initialBalance,
-          overdraftLimit: overdraftLimit,
+          initialBalance,
+          overdraftLimit,
+          // Adiciona os campos snake_case também para garantir compatibilidade
+          initial_balance: initialBalance,
+          overdraft_limit: overdraftLimit,
         };
+        
+        console.log('Usuário normalizado para atualização de cache:', normalizedUser);
         
         // Força a atualização do cache do usuário
         queryClient.setQueryData([`/api/user/${userId}`], normalizedUser);
@@ -80,30 +110,41 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
           const updatedSummary = {
             ...summary,
             currentBalance: parseFloat(initialBalance),
-            // Atualiza outros valores que dependam do saldo inicial se necessário
           };
           console.log('Resumo atualizado:', updatedSummary);
           queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
         }
         
         // Invalida todas as queries relacionadas para garantir atualização completa
-        queryClient.invalidateQueries();
+        queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+        
+        // Força uma atualização global após um pequeno delay para garantir que todas as atualizações foram aplicadas
+        setTimeout(() => {
+          queryClient.invalidateQueries();
+          console.log('Cache completamente invalidado');
+        }, 500);
         
         toast({
           title: 'Sucesso',
-          description: 'Configurações atualizadas com sucesso!',
+          description: 'Configurações da conta atualizadas com sucesso!',
         });
         
         onClose();
       } catch (error) {
         console.error('Erro ao processar resposta:', error);
+        toast({
+          title: 'Erro no processamento',
+          description: 'Ocorreu um erro ao processar a resposta do servidor.',
+          variant: 'destructive',
+        });
       }
     },
     onError: (error) => {
       console.error('Erro na atualização:', error);
       toast({
         title: 'Erro',
-        description: 'Ocorreu um erro ao atualizar as configurações.',
+        description: 'Ocorreu um erro ao atualizar as configurações da conta.',
         variant: 'destructive',
       });
     }
@@ -141,12 +182,30 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
                       type="text"
                       placeholder="0,00" 
                       {...field} 
+                      // Exibe o valor formatado para o usuário
+                      value={field.value ? field.value.replace('.', ',') : ''}
                       onChange={(e) => {
-                        // Format as currency
-                        const value = e.target.value.replace(/\D/g, '');
-                        const numericValue = value === '' ? 0 : parseInt(value);
-                        const formattedValue = (numericValue / 100).toFixed(2);
-                        field.onChange(formattedValue);
+                        // Aceita tanto vírgula quanto ponto como separador decimal
+                        let input = e.target.value.replace(',', '.');
+                        
+                        // Filtra para permitir apenas um ponto decimal
+                        const parts = input.split('.');
+                        if (parts.length > 2) {
+                          input = parts[0] + '.' + parts.slice(1).join('');
+                        }
+                        
+                        // Remove caracteres não numéricos exceto o ponto decimal
+                        input = input.replace(/[^\d.]/g, '');
+                        
+                        // Verifica se é um número válido e converte para formato com 2 casas decimais
+                        if (input === '' || input === '.') {
+                          field.onChange('0.00');
+                        } else {
+                          const numericValue = parseFloat(input);
+                          if (!isNaN(numericValue)) {
+                            field.onChange(numericValue.toFixed(2));
+                          }
+                        }
                       }}
                     />
                   </FormControl>
@@ -169,12 +228,30 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
                       type="text"
                       placeholder="0,00" 
                       {...field} 
+                      // Exibe o valor formatado para o usuário
+                      value={field.value ? field.value.replace('.', ',') : ''}
                       onChange={(e) => {
-                        // Format as currency
-                        const value = e.target.value.replace(/\D/g, '');
-                        const numericValue = value === '' ? 0 : parseInt(value);
-                        const formattedValue = (numericValue / 100).toFixed(2);
-                        field.onChange(formattedValue);
+                        // Aceita tanto vírgula quanto ponto como separador decimal
+                        let input = e.target.value.replace(',', '.');
+                        
+                        // Filtra para permitir apenas um ponto decimal
+                        const parts = input.split('.');
+                        if (parts.length > 2) {
+                          input = parts[0] + '.' + parts.slice(1).join('');
+                        }
+                        
+                        // Remove caracteres não numéricos exceto o ponto decimal
+                        input = input.replace(/[^\d.]/g, '');
+                        
+                        // Verifica se é um número válido e converte para formato com 2 casas decimais
+                        if (input === '' || input === '.') {
+                          field.onChange('0.00');
+                        } else {
+                          const numericValue = parseFloat(input);
+                          if (!isNaN(numericValue)) {
+                            field.onChange(numericValue.toFixed(2));
+                          }
+                        }
                       }}
                     />
                   </FormControl>
