@@ -18,6 +18,48 @@ export const db = drizzle({ client: pool, schema });
 // Exportamos o db original com as funções extras
 export const dbWithExtensions = {
   ...db,
+  // Funções de gerenciamento de usuário
+  getUser: async (id: number) => {
+    console.log(`[DEBUG] Obtendo usuário com ID=${id}`);
+    try {
+      // Usamos SQL direto para ter mais controle e logging
+      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      console.log(`[DEBUG] Resultado da busca: ${result.rows.length} usuários encontrados`);
+      return result.rows.length > 0 ? result.rows[0] : undefined;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar usuário com ID=${id}:`, error);
+      return undefined;
+    }
+  },
+  
+  getUserByUsername: async (username: string) => {
+    console.log(`[DEBUG] Obtendo usuário com username=${username}`);
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+      console.log(`[DEBUG] Resultado da busca: ${result.rows.length} usuários encontrados`);
+      return result.rows.length > 0 ? result.rows[0] : undefined;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar usuário com username=${username}:`, error);
+      return undefined;
+    }
+  },
+  
+  createUser: async (userData: any) => {
+    console.log(`[DEBUG] Criando novo usuário:`, userData);
+    try {
+      const result = await pool.query(
+        'INSERT INTO users (username, email, password, initial_balance, overdraft_limit, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [userData.username, userData.email, userData.password, userData.initialBalance || '0.00', userData.overdraftLimit || '0.00', new Date()]
+      );
+      console.log(`[DEBUG] Usuário criado com sucesso:`, result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`[ERRO] Falha ao criar usuário:`, error);
+      throw error;
+    }
+  },
+  
+  // Função para exclusão de transações recorrentes
   deleteRecurringTransaction: async (id: number): Promise<boolean> => {
     console.log(`[DEBUG] Iniciando exclusão da transação recorrente #${id}`);
     try {

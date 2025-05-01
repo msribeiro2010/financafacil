@@ -2,6 +2,12 @@
 
 // Definição de interface para as extensões do banco de dados
 export interface DbWithExtensions {
+  // Funções de gerenciamento de usuário
+  getUser(id: number): Promise<any | undefined>;
+  getUserByUsername(username: string): Promise<any | undefined>;
+  createUser(userData: any): Promise<any>;
+  
+  // Funções de transações recorrentes
   deleteRecurringTransaction(id: number): Promise<boolean>;
 }
 
