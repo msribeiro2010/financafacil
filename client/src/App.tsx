@@ -13,12 +13,28 @@ import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { apiRequest } from "./lib/queryClient";
 
 function App() {
   const [user, setUser] = useState<any>(null);
   const [authState, setAuthState] = useState<'login' | 'register' | 'authenticated'>('login'); // Estados de autenticação
   const [location, setLocation] = useLocation();
+  
+  // Função para atualizar os dados do usuário
+  const updateUserData = useCallback(async (userId: number) => {
+    try {
+      console.log('Atualizando dados do usuário:', userId);
+      const response = await apiRequest('GET', `/api/user/${userId}`);
+      const updatedUser = await response.json();
+      console.log('Dados do usuário atualizados:', updatedUser);
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      console.error('Erro ao atualizar dados do usuário:', error);
+      return null;
+    }
+  }, []);
   
   // Função para lidar com o login bem-sucedido
   const handleLogin = (userData: any) => {
@@ -82,7 +98,13 @@ function App() {
             <Route path="/transactions" component={() => <Transactions userId={user.id} />} />
             <Route path="/recurring" component={() => <Recurring userId={user.id} />} />
             <Route path="/reports" component={() => <Reports userId={user.id} />} />
-            <Route path="/settings" component={() => <Settings userId={user.id} user={user} />} />
+            <Route path="/settings" component={() => 
+              <Settings 
+                userId={user.id} 
+                user={user} 
+                onUserUpdate={updateUserData}
+              />
+            } />
             <Route component={NotFound} />
           </Switch>
         </AppLayout>

@@ -206,11 +206,48 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
                         
                         // Atualiza as configurações com os valores informados pelo usuário
                         updateUserSettings.mutate(updateData, {
-                          onSuccess: () => {
+                          onSuccess: (response) => {
                             // Força a releitura dos dados do usuário e do resumo
-                            setTimeout(() => {
-                              queryClient.invalidateQueries();
-                            }, 500);
+                            setTimeout(async () => {
+                              try {
+                                // Fornece informações mais detalhadas para debug
+                                const updatedUserData = await response.json();
+                                console.log('Dados atualizados do usuário:', updatedUserData);
+                                
+                                // Atualiza imediatamente o cache com os novos valores
+                                const initialBalance = updatedUserData.initial_balance || updatedUserData.initialBalance;
+                                const overdraftLimit = updatedUserData.overdraft_limit || updatedUserData.overdraftLimit;
+                                
+                                // Normaliza os dados para garantir compatibilidade
+                                const normalizedUser = {
+                                  ...updatedUserData,
+                                  initialBalance,
+                                  overdraftLimit,
+                                  initial_balance: initialBalance,
+                                  overdraft_limit: overdraftLimit,
+                                };
+                                
+                                // Atualiza o cache do usuário
+                                queryClient.setQueryData([`/api/user/${userId}`], normalizedUser);
+                                
+                                // Atualiza o resumo financeiro
+                                const summary = queryClient.getQueryData([`/api/summary/${userId}`]);
+                                if (summary) {
+                                  const updatedSummary = {
+                                    ...summary,
+                                    currentBalance: parseFloat(initialBalance),
+                                  };
+                                  queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
+                                }
+                                
+                                // Força uma completa revalidação
+                                queryClient.invalidateQueries();
+                              } catch (error) {
+                                console.error('Erro ao processar resposta de atualização:', error);
+                                // Força uma completa revalidação em caso de erro
+                                queryClient.invalidateQueries();
+                              }
+                            }, 200);
                           }
                         });
                       }

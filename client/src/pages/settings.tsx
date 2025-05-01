@@ -24,9 +24,10 @@ import { useToast } from '@/hooks/use-toast';
 interface SettingsProps {
   userId: number;
   user: any;
+  onUserUpdate: (userId: number) => Promise<any>;
 }
 
-export default function Settings({ userId, user }: SettingsProps) {
+export default function Settings({ userId, user, onUserUpdate }: SettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [accountSettingsModalOpen, setAccountSettingsModalOpen] = useState(false);
@@ -277,7 +278,20 @@ export default function Settings({ userId, user }: SettingsProps) {
       {/* Modals */}
       <AccountSettingsModal 
         isOpen={accountSettingsModalOpen} 
-        onClose={() => setAccountSettingsModalOpen(false)} 
+        onClose={() => {
+          setAccountSettingsModalOpen(false);
+          // Atualiza os dados do usuário quando o modal é fechado
+          onUserUpdate(userId).then(() => {
+            // Atualiza as queries relacionadas após a atualização do usuário
+            queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+            queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+            
+            toast({
+              title: "Dados atualizados",
+              description: "As configurações da conta foram atualizadas com sucesso."
+            });
+          });
+        }} 
         userId={userId}
         user={user}
       />
