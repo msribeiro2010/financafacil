@@ -125,14 +125,52 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
     inputElement.click();
   };
   
-  const handleResetData = () => {
-    // In a real app, we would reset all data here
+  const handleResetData = async () => {
     setResetConfirmOpen(false);
     
-    toast({
-      title: "Operação simulada",
-      description: "Em um aplicativo real, todos os dados seriam redefinidos.",
-    });
+    try {
+      // Chama a API para redefinir os dados do usuário
+      const response = await fetch(`/api/user/${userId}/reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          initialBalance: '0.00', // Redefine o saldo inicial para zero
+          overdraftLimit: '0.00'  // Redefine o limite de cheque especial para zero
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao redefinir dados: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      // Atualiza o cache com os dados do usuário redefinidos
+      queryClient.setQueryData([`/api/user/${userId}`], result.user);
+      
+      // Invalida todas as consultas para garantir atualização completa dos dados
+      queryClient.invalidateQueries({queryKey: [`/api/transactions/${userId}`]});
+      queryClient.invalidateQueries({queryKey: [`/api/recurring/${userId}`]});
+      queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+      queryClient.invalidateQueries({queryKey: [`/api/category-summary/${userId}`]});
+      
+      // Atualiza os dados do usuário no contexto principal
+      await onUserUpdate(userId);
+      
+      toast({
+        title: "Dados redefinidos",
+        description: "Todas as transações foram excluídas e os saldos foram zerados com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao redefinir dados:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível redefinir os dados. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
