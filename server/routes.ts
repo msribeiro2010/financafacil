@@ -164,16 +164,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
+      console.log(`[GET /api/user/:id] Buscando usuário com ID ${userId}`);
       
-      if (!user) {
+      // Buscar usuário diretamente pelo db para depuração
+      const { pool } = await import('./db');
+      const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      
+      if (result.rows.length === 0) {
+        console.log(`[GET /api/user/:id] Usuário não encontrado`);
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
+      
+      const user = result.rows[0];
+      console.log(`[GET /api/user/:id] Usuário encontrado:`, user);
       
       // Don't send password
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
+      console.error(`[GET /api/user/:id] Erro:`, error);
       res.status(500).json({ message: "Erro ao buscar usuário" });
     }
   });
@@ -259,27 +268,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/:id/settings", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
+      console.log(`[PATCH /api/user/:id/settings] Atualizando configurações do usuário ${userId}:`, req.body);
       
-      if (!user) {
+      // Buscar usuário diretamente para depuração
+      const { pool } = await import('./db');
+      const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      
+      if (userResult.rows.length === 0) {
+        console.log(`[PATCH /api/user/:id/settings] Usuário não encontrado`);
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
       
       const validatedData = accountSettingsSchema.parse(req.body);
-      const updatedUser = await storage.updateUserSettings(
-        userId,
-        validatedData.initialBalance,
-        validatedData.overdraftLimit
+      console.log(`[PATCH /api/user/:id/settings] Dados validados:`, validatedData);
+      
+      // Atualizar diretamente no banco de dados para garantir que a operação seja realizada
+      const updateResult = await pool.query(
+        'UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3 RETURNING *',
+        [validatedData.initialBalance, validatedData.overdraftLimit, userId]
       );
+      
+      if (updateResult.rows.length === 0) {
+        console.log(`[PATCH /api/user/:id/settings] Falha ao atualizar usuário`);
+        return res.status(500).json({ message: "Erro ao atualizar configurações" });
+      }
+      
+      const updatedUser = updateResult.rows[0];
+      console.log(`[PATCH /api/user/:id/settings] Usuário atualizado com sucesso:`, updatedUser);
       
       // Don't send password
       const { password, ...userWithoutPassword } = updatedUser;
-      res.json(userWithoutPassword);
+      
+      // Incluir informações de debug na resposta para o frontend
+      res.json({
+        ...userWithoutPassword,
+        debug: {
+          initialBalanceSubmitted: validatedData.initialBalance,
+          overdraftLimitSubmitted: validatedData.overdraftLimit,
+          initialBalanceUpdated: updatedUser.initial_balance,
+          overdraftLimitUpdated: updatedUser.overdraft_limit
+        }
+      });
     } catch (error) {
+      console.error(`[PATCH /api/user/:id/settings] Erro:`, error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
-      res.status(500).json({ message: "Erro ao atualizar configurações" });
+      res.status(500).json({ message: "Erro ao atualizar configurações", error: error instanceof Error ? error.message : 'Erro desconhecido' });
     }
   });
 

@@ -54,8 +54,24 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
         const updatedUser = await response.json();
         console.log('Usuário atualizado:', updatedUser);
         
+        // Verifica informações de debug se disponíveis
+        if (updatedUser.debug) {
+          console.log('Informações de debug recebidas:', updatedUser.debug);
+        }
+        
+        // Extrai o valor do saldo inicial do campo correto (compatibilidade entre snake_case e camelCase)
+        const initialBalance = updatedUser.initial_balance || updatedUser.initialBalance || '0';
+        const overdraftLimit = updatedUser.overdraft_limit || updatedUser.overdraftLimit || '0';
+        
+        // Adapta o objeto do usuário para garantir a consistência de nomenclatura
+        const normalizedUser = {
+          ...updatedUser,
+          initialBalance: initialBalance,
+          overdraftLimit: overdraftLimit,
+        };
+        
         // Força a atualização do cache do usuário
-        queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
+        queryClient.setQueryData([`/api/user/${userId}`], normalizedUser);
         
         // Atualiza imediatamente o resumo financeiro
         const summary = queryClient.getQueryData([`/api/summary/${userId}`]);
@@ -63,16 +79,15 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
           // Atualiza o saldo atual baseado nas novas configurações
           const updatedSummary = {
             ...summary,
-            currentBalance: parseFloat(updatedUser.initialBalance || '0'),
+            currentBalance: parseFloat(initialBalance),
             // Atualiza outros valores que dependam do saldo inicial se necessário
           };
           console.log('Resumo atualizado:', updatedSummary);
           queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
         }
         
-        // Invalida apenas as queries específicas para evitar loops
-        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-        queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+        // Invalida todas as queries relacionadas para garantir atualização completa
+        queryClient.invalidateQueries();
         
         toast({
           title: 'Sucesso',
@@ -84,7 +99,8 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
         console.error('Erro ao processar resposta:', error);
       }
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Erro na atualização:', error);
       toast({
         title: 'Erro',
         description: 'Ocorreu um erro ao atualizar as configurações.',
