@@ -50,6 +50,65 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Rota temporária para limpar transações recorrentes
+  app.delete("/api/recurring/clear/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      console.log(`[DELETE /api/recurring/clear/:userId] Limpando todas as transações recorrentes do usuário ${userId}`);
+      
+      // Verifica se o ID é válido
+      if (isNaN(userId) || userId <= 0) {
+        console.log(`[DELETE /api/recurring/clear/:userId] ID de usuário inválido: ${userId}`);
+        return res.status(400).json({ message: "ID de usuário inválido" });
+      }
+      
+      // Precisamos primeiro limpar as referências nas transações normais
+      const { pool } = await import('./db');
+      
+      // Primeiro, identificamos as transações recorrentes do usuário
+      const findResult = await pool.query('SELECT id FROM recurring_transactions WHERE user_id = $1', [userId]);
+      
+      if (findResult.rows.length > 0) {
+        console.log(`[DELETE /api/recurring/clear/:userId] Encontradas ${findResult.rows.length} transações recorrentes`);
+        
+        // IDs das transações recorrentes a serem excluídas
+        const recurringIds = findResult.rows.map(row => row.id);
+        
+        // Atualiza transações para remover referências a transações recorrentes
+        console.log(`[DELETE /api/recurring/clear/:userId] Limpando referências nas transações para: ${JSON.stringify(recurringIds)}`);
+        await pool.query('UPDATE transactions SET recurring_id = NULL WHERE recurring_id = ANY($1::int[])', [recurringIds]);
+        
+        // Agora podemos excluir as transações recorrentes
+        console.log(`[DELETE /api/recurring/clear/:userId] Excluindo transações recorrentes`);
+        const result = await pool.query('DELETE FROM recurring_transactions WHERE user_id = $1 RETURNING id', [userId]);
+        
+        console.log(`[DELETE /api/recurring/clear/:userId] ${result.rowCount} transações recorrentes excluídas`);
+        if (result.rows) {
+          console.log(`[DELETE /api/recurring/clear/:userId] IDs excluídos: ${JSON.stringify(result.rows)}`);
+        }
+        
+        return res.status(200).json({ 
+          message: `${result.rowCount} transações recorrentes excluídas com sucesso`,
+          referencesUpdated: recurringIds.length
+        });
+      } else {
+        console.log(`[DELETE /api/recurring/clear/:userId] Nenhuma transação recorrente encontrada para o usuário ${userId}`);
+        return res.status(200).json({ message: "Nenhuma transação recorrente encontrada" });
+      }
+      
+      console.log(`[DELETE /api/recurring/clear/:userId] ${result.rowCount} transações recorrentes excluídas`);
+      if (result.rows) {
+        console.log(`[DELETE /api/recurring/clear/:userId] IDs excluídos: ${JSON.stringify(result.rows)}`);
+      }
+      
+      res.status(200).json({ message: `${result.rowCount} transações recorrentes excluídas com sucesso` });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error(`[DELETE /api/recurring/clear/:userId] Erro: ${errorMessage}`, error);
+      res.status(500).json({ message: "Erro ao limpar transações recorrentes", error: errorMessage });
+    }
+  });
+
   // Serve static files from uploads directory
   app.use('/uploads', (req, res, next) => {
     // Add security headers to prevent unauthorized access
