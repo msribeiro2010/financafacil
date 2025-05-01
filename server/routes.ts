@@ -284,9 +284,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Atualizar diretamente no banco de dados para garantir que a operação seja realizada
       const updateResult = await pool.query(
-        'UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3 RETURNING *',
+        "UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3 RETURNING *",
         [validatedData.initialBalance, validatedData.overdraftLimit, userId]
       );
+      
+      console.log(`[PATCH /api/user/:id/settings] SQL executado com valores: initialBalance=${validatedData.initialBalance}, overdraftLimit=${validatedData.overdraftLimit}`);
       
       if (updateResult.rows.length === 0) {
         console.log(`[PATCH /api/user/:id/settings] Falha ao atualizar usuário`);
@@ -299,16 +301,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't send password
       const { password, ...userWithoutPassword } = updatedUser;
       
-      // Incluir informações de debug na resposta para o frontend
-      res.json({
+      // Cria uma versão normalizada do usuário com ambos os formatos de campo (camelCase e snake_case)
+      const normalizedUser = {
         ...userWithoutPassword,
+        // Garante que tanto camelCase quanto snake_case estão disponíveis
+        initialBalance: updatedUser.initial_balance || updatedUser.initialBalance,
+        overdraftLimit: updatedUser.overdraft_limit || updatedUser.overdraftLimit,
+        initial_balance: updatedUser.initial_balance || updatedUser.initialBalance,
+        overdraft_limit: updatedUser.overdraft_limit || updatedUser.overdraftLimit,
+        // Informações de debug
         debug: {
           initialBalanceSubmitted: validatedData.initialBalance,
           overdraftLimitSubmitted: validatedData.overdraftLimit,
-          initialBalanceUpdated: updatedUser.initial_balance,
-          overdraftLimitUpdated: updatedUser.overdraft_limit
+          initialBalanceUpdated: updatedUser.initial_balance || updatedUser.initialBalance,
+          overdraftLimitUpdated: updatedUser.overdraft_limit || updatedUser.overdraftLimit
         }
-      });
+      };
+      
+      console.log(`[PATCH /api/user/:id/settings] Enviando resposta normalizada:`, normalizedUser);
+      res.json(normalizedUser);
     } catch (error) {
       console.error(`[PATCH /api/user/:id/settings] Erro:`, error);
       if (error instanceof z.ZodError) {
