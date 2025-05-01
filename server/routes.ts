@@ -95,13 +95,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[DELETE /api/recurring/clear/:userId] Nenhuma transação recorrente encontrada para o usuário ${userId}`);
         return res.status(200).json({ message: "Nenhuma transação recorrente encontrada" });
       }
-      
-      console.log(`[DELETE /api/recurring/clear/:userId] ${result.rowCount} transações recorrentes excluídas`);
-      if (result.rows) {
-        console.log(`[DELETE /api/recurring/clear/:userId] IDs excluídos: ${JSON.stringify(result.rows)}`);
-      }
-      
-      res.status(200).json({ message: `${result.rowCount} transações recorrentes excluídas com sucesso` });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       console.error(`[DELETE /api/recurring/clear/:userId] Erro: ${errorMessage}`, error);
