@@ -50,6 +50,51 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Rota temporária para limpar todas as transações e reiniciar a conta
+  app.delete("/api/account/reset/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      console.log(`[DELETE /api/account/reset/:userId] Reiniciando conta do usuário ${userId}`);
+      
+      // Verifica se o ID é válido
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "ID de usuário inválido" });
+      }
+      
+      const { pool } = await import('./db');
+      
+      // Primeiro identificar transações recorrentes para eliminar as referências
+      const findRecurringResult = await pool.query('SELECT id FROM recurring_transactions WHERE user_id = $1', [userId]);
+      const recurringIds = findRecurringResult.rows.map(row => row.id);
+      
+      // Limpar referências a transações recorrentes
+      if (recurringIds.length > 0) {
+        await pool.query('UPDATE transactions SET recurring_id = NULL WHERE recurring_id = ANY($1::int[])', [recurringIds]);
+      }
+      
+      // Excluir todas as transações recorrentes
+      const deleteRecurringResult = await pool.query('DELETE FROM recurring_transactions WHERE user_id = $1', [userId]);
+      
+      // Excluir todas as transações normais
+      const deleteTransactionsResult = await pool.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
+      
+      // Redefinir o saldo inicial e limite de cheque especial para 0
+      await pool.query('UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3', ['0', '0', userId]);
+      
+      console.log(`[DELETE /api/account/reset/:userId] Conta reiniciada com sucesso. Excluídas ${deleteRecurringResult.rowCount} transações recorrentes e ${deleteTransactionsResult.rowCount} transações normais.`);
+      
+      return res.status(200).json({
+        message: "Conta reiniciada com sucesso",
+        transactionsDeleted: deleteTransactionsResult.rowCount,
+        recurringTransactionsDeleted: deleteRecurringResult.rowCount
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error(`[DELETE /api/account/reset/:userId] Erro: ${errorMessage}`, error);
+      res.status(500).json({ message: "Erro ao reiniciar conta", error: errorMessage });
+    }
+  });
+
   // Rota temporária para limpar transações recorrentes
   app.delete("/api/recurring/clear/:userId", async (req, res) => {
     try {
