@@ -610,6 +610,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User reset route
+  app.post("/api/user/:id/reset", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      console.log(`[POST /api/user/:id/reset] Solicitação de redefinição de dados para usuário ${userId}`);
+      
+      // Verifica se o ID é válido
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "ID de usuário inválido" });
+      }
+      
+      const { pool } = await import('./db');
+      
+      // 1. Excluir todas as transações do usuário
+      await pool.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
+      console.log(`[POST /api/user/:id/reset] Transações excluídas para usuário ${userId}`);
+      
+      // 2. Excluir todas as transações recorrentes do usuário
+      await pool.query('DELETE FROM recurring_transactions WHERE user_id = $1', [userId]);
+      console.log(`[POST /api/user/:id/reset] Transações recorrentes excluídas para usuário ${userId}`);
+      
+      // 3. Redefinir o saldo inicial e limite de cheque especial
+      const initialBalance = req.body.initialBalance || '0.00';
+      const overdraftLimit = req.body.overdraftLimit || '0.00';
+      
+      await pool.query(
+        'UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3',
+        [initialBalance, overdraftLimit, userId]
+      );
+      console.log(`[POST /api/user/:id/reset] Configurações da conta redefinidas para: saldo=${initialBalance}, limite=${overdraftLimit}`);
+      
+      // 4. Buscar o usuário atualizado para retornar
+      const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      const updatedUser = userResult.rows[0];
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      // Normalizar os dados do usuário para garantir consistência
+      const normalizedUser = {
+        ...userWithoutPassword,
+        initialBalance: userWithoutPassword.initial_balance,
+        overdraftLimit: userWithoutPassword.overdraft_limit,
+      };
+      
+      return res.status(200).json({
+        message: "Dados do usuário redefinidos com sucesso",
+        user: normalizedUser
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error(`[POST /api/user/:id/reset] Erro: ${errorMessage}`, error);
+      res.status(500).json({ message: "Erro ao redefinir dados do usuário", error: errorMessage });
+    }
+  });
+
   // Summary routes
   app.get("/api/summary/:userId", async (req, res) => {
     try {

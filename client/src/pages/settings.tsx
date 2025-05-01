@@ -129,23 +129,25 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
     setResetConfirmOpen(false);
     
     try {
+      console.log(`Iniciando reset de dados para usuário ${userId}`);
+      
+      // Usa a API request do queryClient para garantir consistência
+      const { apiRequest } = await import('@/lib/queryClient');
+      
       // Chama a API para redefinir os dados do usuário
-      const response = await fetch(`/api/user/${userId}/reset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          initialBalance: '0.00', // Redefine o saldo inicial para zero
-          overdraftLimit: '0.00'  // Redefine o limite de cheque especial para zero
-        })
+      const response = await apiRequest('POST', `/api/user/${userId}/reset`, {
+        initialBalance: '0.00', // Redefine o saldo inicial para zero
+        overdraftLimit: '0.00'  // Redefine o limite de cheque especial para zero
       });
+      
+      console.log('Resposta da API:', response.status);
       
       if (!response.ok) {
         throw new Error(`Erro ao redefinir dados: ${response.status}`);
       }
       
       const result = await response.json();
+      console.log('Dados redefinidos:', result);
       
       // Atualiza o cache com os dados do usuário redefinidos
       queryClient.setQueryData([`/api/user/${userId}`], result.user);
@@ -158,6 +160,11 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
       
       // Atualiza os dados do usuário no contexto principal
       await onUserUpdate(userId);
+      
+      // Força uma atualização geral após 500ms para garantir que os dados se propaguem
+      setTimeout(() => {
+        queryClient.invalidateQueries();
+      }, 500);
       
       toast({
         title: "Dados redefinidos",
