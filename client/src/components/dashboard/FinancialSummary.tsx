@@ -93,19 +93,18 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
     }
   });
   
-  // Funções auxiliares
-  const resetBalance = () => {
-    updateUserSettings.mutate({
-      initialBalance: '0',
-      overdraftLimit: user?.overdraftLimit || '0'
-    });
-  };
-  
-  const setCustomBalance = (value: string) => {
-    updateUserSettings.mutate({
-      initialBalance: value,
-      overdraftLimit: user?.overdraftLimit || '0'
-    });
+  // Função para validar e formatar valores monetários
+  const formatMonetaryValue = (value: string): string => {
+    // Substitui vírgula por ponto
+    let formatted = value.replace(',', '.');
+    
+    // Verifica se é um número válido
+    if (isNaN(parseFloat(formatted))) {
+      return '0';
+    }
+    
+    // Garante que o valor tenha duas casas decimais
+    return parseFloat(formatted).toFixed(2);
   };
   
   if (isLoading) {
@@ -185,18 +184,22 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
                   variant="outline" 
                   size="sm" 
                   className="h-7 px-2" 
-                  title="Zerar saldo"
-                  onClick={resetBalance}
-                  disabled={updateUserSettings.isPending}
-                >
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-7 px-2" 
-                  title="Definir saldo para 1.000,00"
-                  onClick={() => setCustomBalance('1000.00')}
+                  title="Editar configurações da conta"
+                  onClick={() => {
+                    // Prompt para o usuário inserir o saldo inicial
+                    const initialBalance = prompt('Informe o saldo inicial (ex: 1500.50):');
+                    if (initialBalance !== null) {
+                      // Prompt para o usuário inserir o limite de cheque especial
+                      const overdraftLimit = prompt('Informe o limite de cheque especial (ex: 1000.00):');
+                      if (overdraftLimit !== null) {
+                        // Atualiza as configurações com os valores informados pelo usuário
+                        updateUserSettings.mutate({
+                          initialBalance: formatMonetaryValue(initialBalance),
+                          overdraftLimit: formatMonetaryValue(overdraftLimit)
+                        });
+                      }
+                    }
+                  }}
                   disabled={updateUserSettings.isPending}
                 >
                   <Settings className="h-3 w-3" />
