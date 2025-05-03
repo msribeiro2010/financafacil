@@ -195,6 +195,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 1. Excluir todas as transações do usuário
       const { pool } = await import('./db');
+      
+      // Primeiro identificar transações recorrentes para eliminar as referências
+      const findRecurringResult = await pool.query('SELECT id FROM recurring_transactions WHERE user_id = $1', [userId]);
+      const recurringIds = findRecurringResult.rows.map(row => row.id);
+      
+      // Limpar referências a transações recorrentes
+      if (recurringIds.length > 0) {
+        await pool.query('UPDATE transactions SET recurring_id = NULL WHERE recurring_id = ANY($1::int[])', [recurringIds]);
+      }
+      
       await pool.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
       console.log(`[POST /api/user/:id/reset] Transações excluídas para usuário ${userId}`);
       
@@ -202,9 +212,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await pool.query('DELETE FROM recurring_transactions WHERE user_id = $1', [userId]);
       console.log(`[POST /api/user/:id/reset] Transações recorrentes excluídas para usuário ${userId}`);
       
-      // 3. Redefinir o saldo inicial e limite de cheque especial
-      const initialBalance = req.body.initialBalance || '0.00';
-      const overdraftLimit = req.body.overdraftLimit || '0.00';
+      // 3. Redefinir o saldo inicial e limite de cheque especial PARA VALORES FIXOS DE ZERO
+      // Isso garante a limpeza completa da conta
+      const initialBalance = '0.00';
+      const overdraftLimit = '0.00';
       
       await pool.query(
         'UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3',
@@ -378,36 +389,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedUser = afterUpdateResult.rows[0];
-      console.log(`[PATCH /api/user/:id/settings] Usuário atualizado com sucesso:`, updatedUser);
-      
-      // Don't send password
       const { password, ...userWithoutPassword } = updatedUser;
       
-      // Cria uma versão normalizada do usuário com ambos os formatos de campo (camelCase e snake_case)
+      // Normalizar os dados do usuário para garantir consistência entre camelCase e snake_case
       const normalizedUser = {
         ...userWithoutPassword,
-        // Garante que tanto camelCase quanto snake_case estão disponíveis
         initialBalance: updatedUser.initial_balance || updatedUser.initialBalance,
         overdraftLimit: updatedUser.overdraft_limit || updatedUser.overdraftLimit,
         initial_balance: updatedUser.initial_balance || updatedUser.initialBalance,
         overdraft_limit: updatedUser.overdraft_limit || updatedUser.overdraftLimit,
-        // Informações de debug
-        debug: {
-          initialBalanceSubmitted: req.body.initialBalance,
-          overdraftLimitSubmitted: req.body.overdraftLimit,
-          initialBalanceUpdated: updatedUser.initial_balance || updatedUser.initialBalance,
-          overdraftLimitUpdated: updatedUser.overdraft_limit || updatedUser.overdraftLimit
-        }
       };
       
-      console.log(`[PATCH /api/user/:id/settings] Enviando resposta normalizada:`, normalizedUser);
-      res.json(normalizedUser);
+      console.log(`[PATCH /api/user/:id/settings] Enviando usuário normalizado:`, normalizedUser);
+      
+      res.json({
+        message: "Configurações atualizadas com sucesso",
+        user: normalizedUser
+      });
     } catch (error) {
       console.error(`[PATCH /api/user/:id/settings] Erro:`, error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      res.status(500).json({ 
+        message: "Erro ao atualizar configurações", 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      });
+    }
+  });
+
+  // Transaction routes
+  app.get("/api/transactions/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const transactions = await storage.getTransactions(userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error(`[GET /api/transactions/:userId] Erro:`, error);
+      res.status(500).json({ message: "Erro ao buscar transações" });
+    }
+  });
+
+  app.post("/api/transactions", upload.single("attachment"), async (req, res) => {
+    try {
+      console.log("Body received:", req.body);
+      
+      // Prepare transaction data
+      const transactionData = {
+        ...req.body,
+        userId: parseInt(req.body.userId),
+        amount: req.body.amount,
+        categoryId: parseInt(req.body.categoryId),
+        date: req.body.date,
+        recurringId: req.body.recurringId ? parseInt(req.body.recurringId) : null,
+        attachmentPath: req.file ? `/uploads/${req.file.filename}` : null,
+      };
+      
+      console.log("Transaction data:", transactionData);
+      
+      let validatedData;
+      try {
+        validatedData = insertTransactionSchema.parse(transactionData);
+        console.log("Validated data:", validatedData);
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        return res.status(400).json({
+          message: "Dados de transação inválidos",
+          error: validationError,
+        });
       }
-      res.status(500).json({ message: "Erro ao atualizar configurações", error: error instanceof Error ? error.message : 'Erro desconhecido' });
+
+      const newTransaction = await storage.createTransaction(validatedData);
+      console.log("New transaction created:", newTransaction);
+      
+      res.status(201).json(newTransaction);
+    } catch (error) {
+      console.error("Error creating transaction:", error);
+      res.status(500).json({
+        message: "Erro ao criar transação",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.patch("/api/transactions/:id", upload.single("attachment"), async (req, res) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      console.log(`PATCH /api/transactions/${transactionId} Body:`, req.body);
+      
+      // Get existing transaction
+      const existingTransaction = await storage.getTransactionById(transactionId);
+      if (!existingTransaction) {
+        return res.status(404).json({ message: "Transação não encontrada" });
+      }
+
+      // Prepare update data
+      const updateData = { ...req.body };
+      if (updateData.userId) updateData.userId = parseInt(updateData.userId);
+      if (updateData.categoryId) updateData.categoryId = parseInt(updateData.categoryId);
+      if (updateData.recurringId) updateData.recurringId = parseInt(updateData.recurringId);
+
+      // Handle the new attachment if present
+      if (req.file) {
+        updateData.attachmentPath = `/uploads/${req.file.filename}`;
+      } else if (updateData.removeAttachment === 'true') {
+        // Remove attachment if explicitly requested
+        updateData.attachmentPath = null;
+      }
+
+      console.log("Update data:", updateData);
+
+      const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
+      console.log("Updated transaction:", updatedTransaction);
+      
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      res.status(500).json({
+        message: "Erro ao atualizar transação",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.delete("/api/transactions/:id", async (req, res) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      const deleted = await storage.deleteTransaction(transactionId);
+      
+      if (deleted) {
+        res.json({ message: "Transação excluída com sucesso" });
+      } else {
+        res.status(404).json({ message: "Transação não encontrada" });
+      }
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      res.status(500).json({
+        message: "Erro ao excluir transação",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // Recurring transaction routes
+  app.get("/api/recurring/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const transactions = await storage.getRecurringTransactions(userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching recurring transactions:", error);
+      res.status(500).json({ message: "Erro ao buscar transações recorrentes" });
+    }
+  });
+
+  app.post("/api/recurring", async (req, res) => {
+    try {
+      console.log("Recurring transaction body:", req.body);
+      
+      // Prepare recurring transaction data
+      const recurringData = {
+        ...req.body,
+        userId: parseInt(req.body.userId),
+        amount: req.body.amount,
+        categoryId: parseInt(req.body.categoryId),
+      };
+      
+      console.log("Recurring transaction data:", recurringData);
+      
+      // Validate data
+      let validatedData;
+      try {
+        validatedData = insertRecurringTransactionSchema.parse(recurringData);
+        console.log("Validated recurring data:", validatedData);
+      } catch (validationError) {
+        console.error("Validation error on recurring transaction:", validationError);
+        return res.status(400).json({
+          message: "Dados de transação recorrente inválidos",
+          error: validationError,
+        });
+      }
+
+      const newRecurringTransaction = await storage.createRecurringTransaction(validatedData);
+      console.log("New recurring transaction created:", newRecurringTransaction);
+      
+      res.status(201).json(newRecurringTransaction);
+    } catch (error) {
+      console.error("Error creating recurring transaction:", error);
+      res.status(500).json({
+        message: "Erro ao criar transação recorrente",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.patch("/api/recurring/:id", async (req, res) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      
+      // Prepare update data
+      const updateData = { ...req.body };
+      if (updateData.userId) updateData.userId = parseInt(updateData.userId);
+      if (updateData.categoryId) updateData.categoryId = parseInt(updateData.categoryId);
+
+      const updatedTransaction = await storage.updateRecurringTransaction(
+        transactionId,
+        updateData
+      );
+      
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Error updating recurring transaction:", error);
+      res.status(500).json({
+        message: "Erro ao atualizar transação recorrente",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.delete("/api/recurring/:id", async (req, res) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      
+      // Limpar referências nas transações normais antes de excluir a transação recorrente
+      try {
+        const { pool } = await import('./db');
+        await pool.query('UPDATE transactions SET recurring_id = NULL WHERE recurring_id = $1', [transactionId]);
+        console.log(`[DELETE /api/recurring/:id] Referências atualizadas para transação recorrente ${transactionId}`);
+      } catch (dbError) {
+        console.error(`[DELETE /api/recurring/:id] Erro ao atualizar referências:`, dbError);
+      }
+      
+      const deleted = await storage.deleteRecurringTransaction(transactionId);
+      
+      if (deleted) {
+        res.json({ message: "Transação recorrente excluída com sucesso" });
+      } else {
+        res.status(404).json({ message: "Transação recorrente não encontrada" });
+      }
+    } catch (error) {
+      console.error("Error deleting recurring transaction:", error);
+      res.status(500).json({
+        message: "Erro ao excluir transação recorrente",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   });
 
@@ -418,279 +640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categories = await storage.getCategories(type);
       res.json(categories);
     } catch (error) {
+      console.error("Error fetching categories:", error);
       res.status(500).json({ message: "Erro ao buscar categorias" });
-    }
-  });
-
-  // Transaction routes
-  app.get("/api/transactions/:userId", async (req, res) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      const transactions = await storage.getTransactions(userId, limit);
-      
-      // Enhance transactions with category information
-      const enhancedTransactions = await Promise.all(
-        transactions.map(async (transaction) => {
-          let category = null;
-          if (transaction.categoryId) {
-            category = await storage.getCategoryById(transaction.categoryId);
-          }
-          return { ...transaction, category };
-        })
-      );
-      
-      res.json(enhancedTransactions);
-    } catch (error) {
-      res.status(500).json({ message: "Erro ao buscar transações" });
-    }
-  });
-
-  app.post("/api/transactions", upload.single("attachment"), async (req, res) => {
-    try {
-      const data = req.body;
-      
-      // Convert string values to appropriate types but keep date as string
-      const transactionData = {
-        ...data,
-        userId: parseInt(data.userId),
-        amount: data.amount,
-        categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
-        date: data.date, // Keep date as string to match schema expectations
-        isRecurring: data.isRecurring === "true",
-        recurringId: data.recurringId ? parseInt(data.recurringId) : undefined,
-        attachment: req.file ? req.file.path : undefined
-      };
-      
-      const validatedData = insertTransactionSchema.parse(transactionData);
-      const transaction = await storage.createTransaction(validatedData);
-      
-      res.status(201).json(transaction);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
-      }
-      res.status(500).json({ message: "Erro ao criar transação" });
-    }
-  });
-
-  app.patch("/api/transactions/:id", upload.single("attachment"), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const data = req.body;
-      
-      console.log("Transaction update data received:", data);
-      
-      // Convert string values to appropriate types
-      const transactionData: any = {};
-      
-      if (data.userId) transactionData.userId = parseInt(data.userId);
-      if (data.type) transactionData.type = data.type;
-      if (data.description) transactionData.description = data.description;
-      if (data.amount) transactionData.amount = data.amount;
-      if (data.categoryId) transactionData.categoryId = parseInt(data.categoryId);
-      if (data.date) transactionData.date = data.date; // Keep as string
-      if (data.isRecurring !== undefined) transactionData.isRecurring = data.isRecurring === "true";
-      if (data.recurringId) transactionData.recurringId = parseInt(data.recurringId);
-      if (req.file) transactionData.attachment = req.file.path;
-      
-      console.log("Processed transaction data:", transactionData);
-      
-      const transaction = await storage.updateTransaction(id, transactionData);
-      res.json(transaction);
-    } catch (error) {
-      console.error("Error updating transaction:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
-      }
-      res.status(500).json({ message: "Erro ao atualizar transação" });
-    }
-  });
-
-  app.delete("/api/transactions/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteTransaction(id);
-      
-      if (!success) {
-        return res.status(404).json({ message: "Transação não encontrada" });
-      }
-      
-      res.status(204).end();
-    } catch (error) {
-      res.status(500).json({ message: "Erro ao excluir transação" });
-    }
-  });
-
-  // Recurring transaction routes
-  app.get("/api/recurring/:userId", async (req, res) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      const recurringTransactions = await storage.getRecurringTransactions(userId);
-      
-      // Enhance transactions with category information
-      const enhancedTransactions = await Promise.all(
-        recurringTransactions.map(async (transaction) => {
-          let category = null;
-          if (transaction.categoryId) {
-            category = await storage.getCategoryById(transaction.categoryId);
-          }
-          return { ...transaction, category };
-        })
-      );
-      
-      res.json(enhancedTransactions);
-    } catch (error) {
-      res.status(500).json({ message: "Erro ao buscar transações recorrentes" });
-    }
-  });
-
-  app.post("/api/recurring", upload.single("attachment"), async (req, res) => {
-    try {
-      const data = req.body;
-      
-      // Log the incoming data for debugging
-      console.log("Recurring transaction data received:", data);
-      
-      // Convert string values to appropriate types
-      const transactionData = {
-        userId: parseInt(data.userId),
-        type: data.type,
-        description: data.description,
-        amount: data.amount,
-        frequency: data.frequency,
-        startDate: data.startDate,
-        categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
-        endDate: data.endDate || undefined,
-        attachment: req.file ? req.file.path : undefined
-      };
-      
-      const validatedData = insertRecurringTransactionSchema.parse(transactionData);
-      const transaction = await storage.createRecurringTransaction(validatedData);
-      
-      res.status(201).json(transaction);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
-      }
-      res.status(500).json({ message: "Erro ao criar transação recorrente" });
-    }
-  });
-
-  app.patch("/api/recurring/:id", upload.single("attachment"), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const data = req.body;
-      
-      // Log the incoming data for debugging
-      console.log("Recurring transaction update data received:", data);
-      
-      // Convert string values to appropriate types
-      const transactionData: any = {};
-      
-      if (data.userId) transactionData.userId = parseInt(data.userId);
-      if (data.type) transactionData.type = data.type;
-      if (data.description) transactionData.description = data.description;
-      if (data.amount) transactionData.amount = data.amount;
-      if (data.frequency) transactionData.frequency = data.frequency;
-      if (data.categoryId) transactionData.categoryId = parseInt(data.categoryId);
-      if (data.startDate) transactionData.startDate = data.startDate;
-      if (data.endDate) transactionData.endDate = data.endDate;
-      if (req.file) transactionData.attachment = req.file.path;
-      
-      const transaction = await storage.updateRecurringTransaction(id, transactionData);
-      res.json(transaction);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
-      }
-      res.status(500).json({ message: "Erro ao atualizar transação recorrente" });
-    }
-  });
-
-  app.delete("/api/recurring/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      console.log(`[DELETE /api/recurring/:id] Solicitação de exclusão para ID: ${id}`);
-      
-      // Verifica se o ID é válido
-      if (isNaN(id) || id <= 0) {
-        console.log(`[DELETE /api/recurring/:id] ID inválido: ${id}`);
-        return res.status(400).json({ message: "ID de transação recorrente inválido" });
-      }
-      
-      // Tenta excluir a transação recorrente
-      const success = await storage.deleteRecurringTransaction(id);
-      console.log(`[DELETE /api/recurring/:id] Resultado da exclusão: ${success ? 'sucesso' : 'falha'}`);
-      
-      if (!success) {
-        return res.status(404).json({ message: "Transação recorrente não encontrada" });
-      }
-      
-      console.log(`[DELETE /api/recurring/:id] Transação ${id} excluída com sucesso`);
-      res.status(204).end();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error(`[DELETE /api/recurring/:id] Erro: ${errorMessage}`, error);
-      res.status(500).json({ message: "Erro ao excluir transação recorrente", error: errorMessage });
-    }
-  });
-
-  // User reset route
-  app.post("/api/user/:id/reset", async (req, res) => {
-    try {
-      const userId = parseInt(req.params.id);
-      console.log(`[POST /api/user/:id/reset] Solicitação de redefinição de dados para usuário ${userId}`);
-      
-      // Verifica se o ID é válido
-      if (isNaN(userId) || userId <= 0) {
-        return res.status(400).json({ message: "ID de usuário inválido" });
-      }
-      
-      const { pool } = await import('./db');
-      
-      // 1. Excluir todas as transações do usuário
-      await pool.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
-      console.log(`[POST /api/user/:id/reset] Transações excluídas para usuário ${userId}`);
-      
-      // 2. Excluir todas as transações recorrentes do usuário
-      await pool.query('DELETE FROM recurring_transactions WHERE user_id = $1', [userId]);
-      console.log(`[POST /api/user/:id/reset] Transações recorrentes excluídas para usuário ${userId}`);
-      
-      // 3. Redefinir o saldo inicial e limite de cheque especial
-      const initialBalance = req.body.initialBalance || '0.00';
-      const overdraftLimit = req.body.overdraftLimit || '0.00';
-      
-      await pool.query(
-        'UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3',
-        [initialBalance, overdraftLimit, userId]
-      );
-      console.log(`[POST /api/user/:id/reset] Configurações da conta redefinidas para: saldo=${initialBalance}, limite=${overdraftLimit}`);
-      
-      // 4. Buscar o usuário atualizado para retornar
-      const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-      if (userResult.rows.length === 0) {
-        return res.status(404).json({ message: "Usuário não encontrado" });
-      }
-      
-      const updatedUser = userResult.rows[0];
-      const { password, ...userWithoutPassword } = updatedUser;
-      
-      // Normalizar os dados do usuário para garantir consistência
-      const normalizedUser = {
-        ...userWithoutPassword,
-        initialBalance: userWithoutPassword.initial_balance,
-        overdraftLimit: userWithoutPassword.overdraft_limit,
-      };
-      
-      return res.status(200).json({
-        message: "Dados do usuário redefinidos com sucesso",
-        user: normalizedUser
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error(`[POST /api/user/:id/reset] Erro: ${errorMessage}`, error);
-      res.status(500).json({ message: "Erro ao redefinir dados do usuário", error: errorMessage });
     }
   });
 
@@ -701,49 +652,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const summary = await storage.getTransactionSummary(userId);
       res.json(summary);
     } catch (error) {
-      res.status(500).json({ message: "Erro ao buscar resumo" });
+      console.error("Error fetching transaction summary:", error);
+      res.status(500).json({ message: "Erro ao buscar resumo de transações" });
     }
   });
 
-  app.get("/api/category-summary/:userId/:type", async (req, res) => {
+  app.get("/api/category-summary/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const type = req.params.type;
+      const type = req.query.type as string || "expense";
       
-      if (type !== "expense" && type !== "income") {
-        return res.status(400).json({ message: "Tipo inválido" });
-      }
-      
-      const summary = await storage.getCategorySummary(userId, type);
-      res.json(summary);
+      const categorySummary = await storage.getCategorySummary(userId, type);
+      res.json(categorySummary);
     } catch (error) {
+      console.error("Error fetching category summary:", error);
       res.status(500).json({ message: "Erro ao buscar resumo por categoria" });
     }
   });
 
-  app.get("/api/upcoming/:userId", async (req, res) => {
+  app.get("/api/upcoming-bills/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const bills = await storage.getUpcomingBills(userId);
-      
-      // Enhance bills with category information
-      const enhancedBills = await Promise.all(
-        bills.map(async (bill) => {
-          let category = null;
-          if (bill.categoryId) {
-            category = await storage.getCategoryById(bill.categoryId);
-          }
-          return { ...bill, category };
-        })
-      );
-      
-      res.json(enhancedBills);
+      const upcomingBills = await storage.getUpcomingBills(userId);
+      res.json(upcomingBills);
     } catch (error) {
-      res.status(500).json({ message: "Erro ao buscar contas a vencer" });
+      console.error("Error fetching upcoming bills:", error);
+      res.status(500).json({ message: "Erro ao buscar contas a pagar" });
     }
   });
 
-  // Create and return HTTP server
   const httpServer = createServer(app);
+
   return httpServer;
 }
