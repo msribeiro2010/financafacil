@@ -7,19 +7,22 @@ import {
   signOut as firebaseSignOut,
   User as FirebaseUser
 } from "firebase/auth";
+// Note: Não estamos importando getAnalytics para evitar erros em ambientes de desenvolvimento
 
 // Log das variáveis de ambiente para debug
 console.log("Firebase API Key:", import.meta.env.VITE_FIREBASE_API_KEY ? "Definida" : "Não definida");
 console.log("Firebase Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID ? "Definido" : "Não definido");
 console.log("Firebase App ID:", import.meta.env.VITE_FIREBASE_APP_ID ? "Definido" : "Não definido");
 
-// Configuração do Firebase com valores das variáveis de ambiente
+// Configuração do Firebase com valores hard-coded
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAGzBW3nzF83WoLFrU3FqAu6Rw_htJFd8U",
+  authDomain: "dados-financ.firebaseapp.com",
+  projectId: "dados-financ",
+  storageBucket: "dados-financ.appspot.com",
+  messagingSenderId: "262830477373",
+  appId: "1:262830477373:web:6655ed1f2eb72159ab1a54",
+  measurementId: "G-P9TWWN09N9"
 };
 
 // Inicializar Firebase
