@@ -5,6 +5,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
+  email: text("email").default(""),
   password: text("password").notNull(),
   initialBalance: numeric("initial_balance", { precision: 10, scale: 2 }).default("0").notNull(),
   overdraftLimit: numeric("overdraft_limit", { precision: 10, scale: 2 }).default("0").notNull(),

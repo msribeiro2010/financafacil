@@ -254,6 +254,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/user/register", async (req, res) => {
+    try {
+      const { username, email, password } = req.body;
+      
+      console.log(`Registration attempt for username: ${username}`);
+      
+      if (!username || !password) {
+        console.log("Missing username or password");
+        return res.status(400).json({ message: "Usuário e senha são obrigatórios" });
+      }
+      
+      // Verificar se o usuário já existe
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        console.log(`Username ${username} already exists`);
+        return res.status(400).json({ message: "Nome de usuário já existe" });
+      }
+      
+      // Criar o novo usuário
+      const newUser = await storage.createUser({
+        username,
+        email: email || "",
+        password,
+        initial_balance: "0.00",
+        overdraft_limit: "0.00"
+      });
+      
+      console.log(`User registered successfully: ${username}`);
+      
+      // Não enviar a senha na resposta
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Erro ao registrar usuário" });
+    }
+  });
+
   app.post("/api/user/login", async (req, res) => {
     try {
       const { username, password } = req.body;

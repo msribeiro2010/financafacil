@@ -56,18 +56,34 @@ export default function Register() {
         throw new Error('A senha deve ter pelo menos 6 caracteres');
       }
 
-      // Simular chamada de API para registro
-      setTimeout(() => {
-        toast({
-          title: 'Cadastro realizado com sucesso',
-          description: 'Você será redirecionado para a página de login',
-        });
+      // Chamada real para a API de registro
+      const response = await fetch('/api/user/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-        // Redirecionar para a página de login após 2 segundos
-        setTimeout(() => {
-          setLocation('/');
-        }, 2000);
-      }, 1500);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao registrar usuário');
+      }
+
+      // Registro bem-sucedido
+      toast({
+        title: 'Cadastro realizado com sucesso',
+        description: 'Você será redirecionado para a página de login',
+      });
+
+      // Redirecionar para a página de login após 2 segundos
+      setTimeout(() => {
+        setLocation('/');
+      }, 2000);
     } catch (err: any) {
       setError(err.message);
       toast({
