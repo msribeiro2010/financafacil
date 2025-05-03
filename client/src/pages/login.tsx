@@ -95,24 +95,36 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
       const user = await signInWithGoogle();
       
       if (user) {
-        // Cria um objeto de usuário com os dados do Google
-        const userData = {
-          id: 1, // Para manter compatibilidade com a app existente
-          username: user.displayName || 'Usuário Google',
-          email: user.email,
-          initialBalance: '0.00',
-          overdraftLimit: '0.00',
-          photoURL: user.photoURL,
-          uid: user.uid
-        };
-        
-        toast({
-          title: 'Login bem-sucedido',
-          description: `Bem-vindo, ${userData.username}!`,
-        });
-        
-        // Chama a função onLogin com os dados do usuário
-        onLogin(userData);
+        // Enviar os dados do Google para o servidor e criar/obter um usuário
+        try {
+          const response = await fetch('/api/user/google-auth', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              displayName: user.displayName,
+              email: user.email,
+              uid: user.uid,
+              photoURL: user.photoURL,
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Falha ao autenticar com Google');
+          }
+          
+          const userData = await response.json();
+          
+          toast({
+            title: 'Login bem-sucedido',
+            description: `Bem-vindo, ${userData.username || user.displayName}!`,
+          });
+          
+          onLogin(userData);
+        } catch (apiError: any) {
+          throw new Error('Erro ao processar login Google: ' + (apiError.message || 'Erro desconhecido'));
+        }
       }
     } catch (err: any) {
       let errorMessage = err.message;
@@ -128,29 +140,6 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
         description: errorMessage,
         variant: 'destructive',
       });
-      
-      // Versão de demonstração - para fins de teste apenas
-      if (err.message.includes('unauthorized-domain') || err.code === 'auth/unauthorized-domain') {
-        setTimeout(() => {
-          // Demo login para contornar a restrição de domínio
-          const mockUserData = {
-            id: 2,
-            username: 'Marcelo (Google)',
-            email: 'marcelo@exemplo.com',
-            initialBalance: '8500.00',
-            overdraftLimit: '3000.00',
-            photoURL: null,
-            uid: 'google-demo-uid'
-          };
-          
-          toast({
-            title: 'Login de demonstração',
-            description: 'Usando login simulado do Google devido à restrição de domínio.',
-          });
-          
-          onLogin(mockUserData);
-        }, 2000);
-      }
     } finally {
       setIsGoogleLoading(false);
     }

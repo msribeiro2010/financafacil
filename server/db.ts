@@ -44,6 +44,19 @@ export const dbWithExtensions = {
     }
   },
   
+  getUserByEmail: async (email: string) => {
+    if (!email) return undefined;
+    console.log(`[DEBUG] Obtendo usuário com email=${email}`);
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      console.log(`[DEBUG] Resultado da busca por email: ${result.rows.length} usuários encontrados`);
+      return result.rows.length > 0 ? result.rows[0] : undefined;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar usuário com email=${email}:`, error);
+      return undefined;
+    }
+  },
+  
   createUser: async (userData: any) => {
     console.log(`[DEBUG] Criando novo usuário:`, userData);
     try {

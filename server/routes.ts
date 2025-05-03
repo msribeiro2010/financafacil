@@ -327,6 +327,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint para autenticar com Google
+  app.post("/api/user/google-auth", async (req, res) => {
+    try {
+      const { displayName, email, uid } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email obrigatório para autenticação Google" });
+      }
+      
+      // Verificar se o usuário já existe pelo uid do Google
+      let user = await storage.getUserByEmail(email);
+      
+      if (user) {
+        // Usuário existe, fazer login
+        // Store user ID in session
+        if (req.session) {
+          req.session.userId = user.id;
+        }
+        
+        // Don't send password
+        const { password: _, ...userWithoutPassword } = user;
+        return res.json(userWithoutPassword);
+      } else {
+        // Criar novo usuário com os dados do Google
+        const username = email.split('@')[0] || displayName.replace(/\s+/g, '');
+        
+        // Verificar se o username já existe
+        const existingUserWithUsername = await storage.getUserByUsername(username);
+        
+        // Se username existir, adicionar um sufixo numérico
+        const finalUsername = existingUserWithUsername 
+          ? `${username}${Math.floor(Math.random() * 10000)}` 
+          : username;
+        
+        // Senha aleatória que o usuário nunca usará (login sempre via Google)
+        const password = Math.random().toString(36).slice(-10);
+        
+        const newUser = await storage.createUser({
+          username: finalUsername,
+          email,
+          password,
+          initialBalance: "0.00",
+          overdraftLimit: "0.00"
+        });
+        
+        // Store user ID in session
+        if (req.session) {
+          req.session.userId = newUser.id;
+        }
+        
+        // Don't send password
+        const { password: _, ...userWithoutPassword } = newUser;
+        return res.status(201).json(userWithoutPassword);
+      }
+    } catch (error) {
+      console.error("Google auth error:", error);
+      res.status(500).json({ message: "Erro na autenticação com Google" });
+    }
+  });
+
   app.post("/api/user/logout", (req, res) => {
     try {
       if (req.session) {

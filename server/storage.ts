@@ -13,6 +13,7 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserSettings(userId: number, initialBalance: string, overdraftLimit: string): Promise<User>;
   
@@ -51,6 +52,17 @@ export class DatabaseStorage implements IStorage {
     console.log(`Looking for user with username: ${username}`);
     const user = db.getUserByUsername(username);
     console.log(`Found user:`, user);
+    return user;
+  }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!email) return undefined;
+    
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+      
     return user;
   }
   
