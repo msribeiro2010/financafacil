@@ -52,16 +52,19 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: [`/api/user/${userId}`],
     initialData: initialUser, // Usa os dados iniciais enquanto carrega
-    refetchInterval: 1000, // Recarrega os dados a cada 1 segundo para garantir que a página fique sempre atualizada
+    // Removemos o refetchInterval para evitar que os placares fiquem piscando
     refetchOnWindowFocus: true, // Recarrega quando a janela recebe foco
+    staleTime: 30000, // Considera os dados válidos por 30 segundos
   });
   
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
+    staleTime: 30000, // Considera os dados válidos por 30 segundos
   });
   
   const { data: recurringTransactions, isLoading: recurringLoading } = useQuery({
     queryKey: [`/api/recurring/${userId}`],
+    staleTime: 30000, // Considera os dados válidos por 30 segundos
   });
   
   const handleEditAccountSettings = () => {
