@@ -98,7 +98,7 @@ export const dbWithExtensions = {
     console.log(`[DEBUG] Buscando transações recorrentes para o usuário #${userId}`);
     try {
       const result = await pool.query(
-        'SELECT * FROM recurring_transactions WHERE user_id = $1 ORDER BY next_date ASC',
+        'SELECT * FROM recurring_transactions WHERE user_id = $1 ORDER BY start_date ASC',
         [userId]
       );
       console.log(`[DEBUG] Encontradas ${result.rows.length} transações recorrentes para o usuário #${userId}`);

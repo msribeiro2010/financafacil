@@ -251,11 +251,13 @@ export class DatabaseStorage implements IStorage {
       throw new Error("User not found");
     }
     
-    const transactions = await this.getTransactions(userId);
+    // Usar a função do dbWithExtensions em vez do método da classe
+    const { dbWithExtensions } = await import('./db');
+    const transactions = await dbWithExtensions.getTransactions(userId);
     
     // Parse numeric values
-    const initialBalance = parseFloat(user.initialBalance as string);
-    const overdraftLimit = parseFloat(user.overdraftLimit as string) || 0; // Garante que o limite nunca é NaN
+    const initialBalance = parseFloat(user.initialBalance as string || user.initial_balance as string || '0');
+    const overdraftLimit = parseFloat(user.overdraftLimit as string || user.overdraft_limit as string || '0'); // Garante que o limite nunca é NaN
     
     let totalIncome = 0;
     let totalExpenses = 0;
@@ -278,12 +280,12 @@ export class DatabaseStorage implements IStorage {
     let projectedBalance = currentBalance;
     
     // Get recurring transactions and calculate projected balance
-    const recurringTransactions = await this.getRecurringTransactions(userId);
+    const recurringTransactions = await dbWithExtensions.getRecurringTransactions(userId);
     const today = new Date();
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
     for (const transaction of recurringTransactions) {
-      const startDate = new Date(transaction.startDate);
+      const startDate = new Date(transaction.startDate || transaction.start_date);
       
       if (transaction.frequency === "monthly" && startDate.getDate() > today.getDate() && startDate.getDate() <= endOfMonth.getDate()) {
         const amount = parseFloat(transaction.amount as string);
@@ -304,7 +306,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getCategorySummary(userId: number, type: string): Promise<CategorySummary[]> {
-    const transactionsList = await this.getTransactions(userId);
+    // Usar a função do dbWithExtensions em vez do método da classe
+    const { dbWithExtensions } = await import('./db');
+    const transactionsList = await dbWithExtensions.getTransactions(userId);
     const filteredTransactions = transactionsList.filter(t => t.type === type);
     
     const categorySums = new Map<number, number>();
@@ -312,10 +316,12 @@ export class DatabaseStorage implements IStorage {
     
     // Calculate sum by category
     for (const transaction of filteredTransactions) {
-      if (transaction.categoryId) {
+      // Verifica se temos category_id (banco) ou categoryId (app)
+      const catId = transaction.categoryId || transaction.category_id;
+      if (catId) {
         const amount = parseFloat(transaction.amount as string);
-        const current = categorySums.get(transaction.categoryId) || 0;
-        categorySums.set(transaction.categoryId, current + amount);
+        const current = categorySums.get(catId) || 0;
+        categorySums.set(catId, current + amount);
         total += amount;
       }
     }
@@ -344,8 +350,9 @@ export class DatabaseStorage implements IStorage {
     const thirtyDaysLater = new Date();
     thirtyDaysLater.setDate(today.getDate() + 30);
     
-    // Get all transactions for the user
-    const allTransactions = await this.getTransactions(userId);
+    // Usar a função do dbWithExtensions em vez do método da classe
+    const { dbWithExtensions } = await import('./db');
+    const allTransactions = await dbWithExtensions.getTransactions(userId);
     
     // Filter for upcoming expense transactions
     return allTransactions
