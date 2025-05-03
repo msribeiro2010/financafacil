@@ -72,6 +72,43 @@ export const dbWithExtensions = {
     }
   },
   
+  // Função para buscar transações
+  getTransactions: async (userId: number, limit?: number) => {
+    console.log(`[DEBUG] Buscando transações para o usuário #${userId}${limit ? ', limite: ' + limit : ''}`);
+    try {
+      let query = 'SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC';
+      const params = [userId];
+      
+      if (limit) {
+        query += ' LIMIT $2';
+        params.push(limit);
+      }
+      
+      const result = await pool.query(query, params);
+      console.log(`[DEBUG] Encontradas ${result.rows.length} transações para o usuário #${userId}`);
+      return result.rows;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar transações para usuário #${userId}:`, error);
+      return [];
+    }
+  },
+  
+  // Função para buscar transações recorrentes
+  getRecurringTransactions: async (userId: number) => {
+    console.log(`[DEBUG] Buscando transações recorrentes para o usuário #${userId}`);
+    try {
+      const result = await pool.query(
+        'SELECT * FROM recurring_transactions WHERE user_id = $1 ORDER BY next_date ASC',
+        [userId]
+      );
+      console.log(`[DEBUG] Encontradas ${result.rows.length} transações recorrentes para o usuário #${userId}`);
+      return result.rows;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar transações recorrentes para usuário #${userId}:`, error);
+      return [];
+    }
+  },
+  
   // Função para exclusão de transações recorrentes
   deleteRecurringTransaction: async (id: number): Promise<boolean> => {
     console.log(`[DEBUG] Iniciando exclusão da transação recorrente #${id}`);

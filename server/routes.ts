@@ -642,10 +642,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recurring/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const transactions = await storage.getRecurringTransactions(userId);
+      console.log(`[GET /api/recurring/:userId] Buscando transações recorrentes para usuário ${userId}`);
+      
+      // Usar a função do dbWithExtensions
+      const { dbWithExtensions } = await import('./db');
+      const transactions = await dbWithExtensions.getRecurringTransactions(userId);
+      
+      console.log(`[GET /api/recurring/:userId] Encontradas ${transactions.length} transações recorrentes`);
       res.json(transactions);
     } catch (error) {
-      console.error("Error fetching recurring transactions:", error);
+      console.error("[GET /api/recurring/:userId] Erro:", error);
       res.status(500).json({ message: "Erro ao buscar transações recorrentes" });
     }
   });
