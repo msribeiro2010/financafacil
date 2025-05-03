@@ -13,13 +13,13 @@ console.log("Firebase API Key:", import.meta.env.VITE_FIREBASE_API_KEY ? "Defini
 console.log("Firebase Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID ? "Definido" : "Não definido");
 console.log("Firebase App ID:", import.meta.env.VITE_FIREBASE_APP_ID ? "Definido" : "Não definido");
 
-// Configuração do Firebase com valores hard-coded para garantir funcionamento
+// Configuração do Firebase com valores das variáveis de ambiente
 const firebaseConfig = {
-  apiKey: "AIzaSyDlAeY3c6VrmwtM9_QyysimdHptWQTIRrg",
-  authDomain: "funcionarios-a2333.firebaseapp.com",
-  projectId: "funcionarios-a2333",
-  storageBucket: "funcionarios-a2333.appspot.com",
-  appId: "1:20231522761:web:0edc736e895892115c0018",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Inicializar Firebase
