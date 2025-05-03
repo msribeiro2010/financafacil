@@ -28,8 +28,23 @@ function App() {
       const response = await apiRequest('GET', `/api/user/${userId}`);
       const updatedUser = await response.json();
       console.log('Dados do usuário atualizados:', updatedUser);
-      setUser(updatedUser);
-      return updatedUser;
+      
+      // Forçar atualizando a versão normalizada para o React
+      const normalizedUser = {
+        ...updatedUser,
+        initialBalance: updatedUser.initial_balance,
+        overdraftLimit: updatedUser.overdraft_limit,
+      };
+      
+      console.log('Dados do usuário normalizados para atualização:', normalizedUser);
+      
+      // Atualizar o estado com os dados normalizados
+      setUser(normalizedUser);
+      
+      // Atualizar o cache do React Query para sincronização com componentes
+      queryClient.setQueryData([`/api/user/${userId}`], normalizedUser);
+      
+      return normalizedUser;
     } catch (error) {
       console.error('Erro ao atualizar dados do usuário:', error);
       return null;

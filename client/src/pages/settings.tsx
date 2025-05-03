@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,21 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
   const queryClient = useQueryClient();
   const [accountSettingsModalOpen, setAccountSettingsModalOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  
+  // Efeito para forçar uma atualização dos dados do usuário ao carregar a página
+  useEffect(() => {
+    const fetchLatestUserData = async () => {
+      try {
+        console.log('Buscando dados atualizados do usuário na página de configurações');
+        const updatedUser = await onUserUpdate(userId);
+        console.log('Dados do usuário recebidos:', updatedUser);
+      } catch (error) {
+        console.error('Erro ao buscar dados do usuário:', error);
+      }
+    };
+    
+    fetchLatestUserData();
+  }, [userId, onUserUpdate]);
   
   // Buscar dados do usuário diretamente da API para sempre ter a versão mais atualizada
   const { data: user, isLoading: userLoading } = useQuery({
