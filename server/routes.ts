@@ -303,11 +303,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Usuário e senha são obrigatórios" });
       }
       
+      console.log(`Looking for user with username: ${username}`);
       const user = await storage.getUserByUsername(username);
       console.log(`User found:`, user ? "Yes" : "No");
       
-      if (!user || user.password !== password) {
-        console.log("Invalid credentials");
+      if (!user) {
+        console.log("User not found");
+        return res.status(401).json({ message: "Usuário ou senha inválidos" });
+      }
+
+      console.log("Checking credentials");
+      // Para simplificar a autenticação durante o desenvolvimento, permitir login direto
+      // Para uma aplicação em produção, aqui seria o lugar para verificar o hash da senha
+      // Por exemplo: const passwordMatch = await bcrypt.compare(password, user.password);
+      const isValidPassword = user.password === password;
+      
+      if (!isValidPassword) {
+        console.log("Invalid password");
         return res.status(401).json({ message: "Usuário ou senha inválidos" });
       }
       

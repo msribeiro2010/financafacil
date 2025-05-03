@@ -45,13 +45,18 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return db.getUser(id);
+    console.log(`[DEBUG] Buscando usuário com ID: ${id}`);
+    // Importante: usar await aqui também para garantir que a Promise seja resolvida
+    const user = await db.getUser(id);
+    console.log(`[DEBUG] Usuário encontrado:`, user ? 'Sim' : 'Não');
+    return user;
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    console.log(`Looking for user with username: ${username}`);
-    const user = db.getUserByUsername(username);
-    console.log(`Found user:`, user);
+    console.log(`[DEBUG] Buscando usuário com username: ${username}`);
+    // Importante: await é necessário aqui porque getUserByUsername retorna uma Promise
+    const user = await db.getUserByUsername(username);
+    console.log(`[DEBUG] Usuário encontrado:`, user ? 'Sim' : 'Não');
     return user;
   }
   
@@ -67,17 +72,22 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(user: InsertUser): Promise<User> {
-    const newUser = db.createUser(user);
+    console.log(`[DEBUG] Criando novo usuário:`, user.username);
+    // Importante: adicionar await aqui também
+    const newUser = await db.createUser(user);
+    console.log(`[DEBUG] Novo usuário criado com ID:`, newUser.id);
     
     // Se for o primeiro usuário, inicialize o banco de dados
     try {
       const userCount = await db.select('SELECT COUNT(*) as count FROM users') as any[];
+      console.log(`[DEBUG] Contagem de usuários:`, userCount);
       if (userCount && userCount.length > 0 && userCount[0].count === 1) {
+        console.log(`[DEBUG] Inicializando banco de dados para o primeiro usuário`);
         await this.initializeDefaultCategories();
         await this.addDemoTransactions(newUser.id);
       }
     } catch (error) {
-      console.error('Erro ao verificar quantidade de usuários:', error);
+      console.error('[ERRO] Erro ao verificar quantidade de usuários:', error);
     }
     
     return newUser;
