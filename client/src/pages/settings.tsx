@@ -134,38 +134,44 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
       // Usa a API request do queryClient para garantir consistência
       const { apiRequest } = await import('@/lib/queryClient');
       
+      console.log('Chamando API de reset de dados...');
       // Chama a API para redefinir os dados do usuário
       const response = await apiRequest('POST', `/api/user/${userId}/reset`, {
         initialBalance: '0.00', // Redefine o saldo inicial para zero
         overdraftLimit: '0.00'  // Redefine o limite de cheque especial para zero
       });
       
-      console.log('Resposta da API:', response.status);
+      console.log('Resposta da API:', response.status, response.ok);
       
       if (!response.ok) {
         throw new Error(`Erro ao redefinir dados: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('Dados redefinidos:', result);
+      console.log('Dados redefinidos com sucesso:', result);
       
       // Atualiza o cache com os dados do usuário redefinidos
+      console.log('Atualizando cache com novos dados');
       queryClient.setQueryData([`/api/user/${userId}`], result.user);
       
       // Invalida todas as consultas para garantir atualização completa dos dados
+      console.log('Invalidando consultas para atualizar dados');
       queryClient.invalidateQueries({queryKey: [`/api/transactions/${userId}`]});
       queryClient.invalidateQueries({queryKey: [`/api/recurring/${userId}`]});
       queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
       queryClient.invalidateQueries({queryKey: [`/api/category-summary/${userId}`]});
       
       // Atualiza os dados do usuário no contexto principal
+      console.log('Atualizando dados do usuário no contexto principal');
       await onUserUpdate(userId);
       
       // Força uma atualização geral após 500ms para garantir que os dados se propaguem
       setTimeout(() => {
+        console.log('Forçando atualização geral de dados');
         queryClient.invalidateQueries();
       }, 500);
       
+      console.log('Exibindo toast de sucesso');
       toast({
         title: "Dados redefinidos",
         description: "Todas as transações foram excluídas e os saldos foram zerados com sucesso.",
