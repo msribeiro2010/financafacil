@@ -529,7 +529,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transactions/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const transactions = await storage.getTransactions(userId);
+      console.log(`[GET /api/transactions/:userId] Buscando transações para usuário ${userId}`);
+      
+      // Usar a função do dbWithExtensions
+      const { dbWithExtensions } = await import('./db');
+      const transactions = await dbWithExtensions.getTransactions(userId);
+      
+      console.log(`[GET /api/transactions/:userId] Encontradas ${transactions.length} transações`);
       res.json(transactions);
     } catch (error) {
       console.error(`[GET /api/transactions/:userId] Erro:`, error);
