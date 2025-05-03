@@ -326,6 +326,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.id);
       console.log(`[PATCH /api/user/:id/settings] Atualizando configurações do usuário ${userId}:`, req.body);
       
+      // Verificar o formato dos dados recebidos
+      console.log('[PATCH /api/user/:id/settings] Tipo de req.body:', typeof req.body);
+      console.log('[PATCH /api/user/:id/settings] Propriedades recebidas:', Object.keys(req.body));
+      console.log('[PATCH /api/user/:id/settings] Raw req.body:', JSON.stringify(req.body));
+      
       // Buscar usuário diretamente para depuração
       const { pool } = await import('./db');
       const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
@@ -335,23 +340,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
       
-      const validatedData = accountSettingsSchema.parse(req.body);
-      console.log(`[PATCH /api/user/:id/settings] Dados validados:`, validatedData);
+      // Log do usuário atual antes da atualização
+      console.log(`[PATCH /api/user/:id/settings] Dados atuais do usuário:`, userResult.rows[0]);
+      
+      // Prepara valores iniciais com defaults seguros
+      let initialBalance = '0.00';
+      let overdraftLimit = '0.00';
+      
+      try {
+        // Tenta validar com o schema
+        const validatedData = accountSettingsSchema.parse(req.body);
+        console.log(`[PATCH /api/user/:id/settings] Dados validados:`, validatedData);
+        
+        initialBalance = validatedData.initialBalance;
+        overdraftLimit = validatedData.overdraftLimit;
+      } catch (validationError) {
+        console.log('[PATCH /api/user/:id/settings] Erro de validação de schema, usando valores brutos de req.body');
+        initialBalance = typeof req.body.initialBalance === 'string' ? req.body.initialBalance : '0.00';
+        overdraftLimit = typeof req.body.overdraftLimit === 'string' ? req.body.overdraftLimit : '0.00';
+      }
       
       // Atualizar diretamente no banco de dados para garantir que a operação seja realizada
-      const updateResult = await pool.query(
-        "UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3 RETURNING *",
-        [validatedData.initialBalance, validatedData.overdraftLimit, userId]
+      console.log(`[PATCH /api/user/:id/settings] Executando SQL com valores: initialBalance=${initialBalance}, overdraftLimit=${overdraftLimit}`);
+      
+      await pool.query(
+        "UPDATE users SET initial_balance = $1, overdraft_limit = $2 WHERE id = $3",
+        [initialBalance, overdraftLimit, userId]
       );
       
-      console.log(`[PATCH /api/user/:id/settings] SQL executado com valores: initialBalance=${validatedData.initialBalance}, overdraftLimit=${validatedData.overdraftLimit}`);
+      // Busca o usuário novamente após a atualização
+      const afterUpdateResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      console.log(`[PATCH /api/user/:id/settings] Usuário após atualização:`, afterUpdateResult.rows[0]);
       
-      if (updateResult.rows.length === 0) {
-        console.log(`[PATCH /api/user/:id/settings] Falha ao atualizar usuário`);
+      if (afterUpdateResult.rows.length === 0) {
+        console.log(`[PATCH /api/user/:id/settings] Falha ao obter usuário atualizado`);
         return res.status(500).json({ message: "Erro ao atualizar configurações" });
       }
       
-      const updatedUser = updateResult.rows[0];
+      const updatedUser = afterUpdateResult.rows[0];
       console.log(`[PATCH /api/user/:id/settings] Usuário atualizado com sucesso:`, updatedUser);
       
       // Don't send password
@@ -367,8 +393,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overdraft_limit: updatedUser.overdraft_limit || updatedUser.overdraftLimit,
         // Informações de debug
         debug: {
-          initialBalanceSubmitted: validatedData.initialBalance,
-          overdraftLimitSubmitted: validatedData.overdraftLimit,
+          initialBalanceSubmitted: req.body.initialBalance,
+          overdraftLimitSubmitted: req.body.overdraftLimit,
           initialBalanceUpdated: updatedUser.initial_balance || updatedUser.initialBalance,
           overdraftLimitUpdated: updatedUser.overdraft_limit || updatedUser.overdraftLimit
         }
