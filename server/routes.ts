@@ -277,8 +277,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         email: email || "",
         password,
-        initial_balance: "0.00",
-        overdraft_limit: "0.00"
+        initialBalance: "0.00",
+        overdraftLimit: "0.00"
       });
       
       console.log(`User registered successfully: ${username}`);

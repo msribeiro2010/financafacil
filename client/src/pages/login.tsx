@@ -37,38 +37,52 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
     setIsLoading(true);
     setError(null);
 
-    // Versão simplificada sem try/catch para evitar erros
-    if (formData.username === 'Marcelo' && formData.password === 'demo123') {
-      // Demo login direto para simplificar (sem chamada API)
-      const mockUserData = {
-        id: 1,
-        username: 'Marcelo',
-        initialBalance: '6103.00',
-        overdraftLimit: '5000.00'
+    try {
+      // Chamada real para a API de login
+      const response = await fetch('/api/user/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+        }),
+      });
+
+      // Checando se a resposta foi bem-sucedida
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Usuário ou senha inválidos');
+      }
+
+      // Processando resposta bem-sucedida
+      const userData = await response.json();
+
+      // Normalizando os dados para garantir compatibilidade com o formato esperado
+      const normalizedUser = {
+        ...userData,
+        initialBalance: userData.initialBalance || userData.initial_balance,
+        overdraftLimit: userData.overdraftLimit || userData.overdraft_limit,
       };
       
-      // Login successful
-      setTimeout(() => {
-        toast({
-          title: 'Login bem-sucedido',
-          description: `Bem-vindo, ${mockUserData.username}!`,
-        });
+      // Login bem-sucedido
+      toast({
+        title: 'Login bem-sucedido',
+        description: `Bem-vindo, ${normalizedUser.username}!`,
+      });
 
-        // Call the onLogin function with user data
-        onLogin(mockUserData);
-      }, 1000); // Simula um atraso de rede
-    } else {
-      // Simula falha de login para credenciais incorretas
-      setTimeout(() => {
-        const errorMsg = 'Usuário ou senha inválidos';
-        setError(errorMsg);
-        toast({
-          title: 'Erro de login',
-          description: errorMsg,
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-      }, 1000);
+      // Chamar a função onLogin com os dados do usuário
+      onLogin(normalizedUser);
+    } catch (err: any) {
+      const errorMsg = err.message || 'Erro ao realizar login';
+      setError(errorMsg);
+      toast({
+        title: 'Erro de login',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+      setIsLoading(false);
     }
   };
   
