@@ -19,18 +19,30 @@ interface AccountSettingsModalProps {
   user: any;
 }
 
-// Função auxiliar para formatar valores monetários
-const formatMonetaryValue = (value: string): string => {
-  // Substitui vírgula por ponto
-  let formatted = value.replace(',', '.');
+// Função auxiliar para formatar valores monetários com tratamento mais rigoroso
+const formatMonetaryValue = (value: string | number | null | undefined): string => {
+  // Garante que temos uma string para trabalhar
+  if (value === null || value === undefined) {
+    return '0.00';
+  }
   
-  // Verifica se é um número válido
-  if (isNaN(parseFloat(formatted))) {
+  // Converte para string se for número
+  const strValue = typeof value === 'number' ? value.toString() : value;
+  
+  // Substitui vírgula por ponto
+  let formatted = strValue.replace(',', '.');
+  
+  // Remove caracteres não numéricos exceto o ponto decimal
+  formatted = formatted.replace(/[^\d.]/g, '');
+  
+  // Verificar se é um número válido
+  const numValue = parseFloat(formatted);
+  if (isNaN(numValue)) {
     return '0.00';
   }
   
   // Garante que o valor tenha duas casas decimais
-  return parseFloat(formatted).toFixed(2);
+  return numValue.toFixed(2);
 };
 
 // Componente de configurações da conta que permite ajustar saldo inicial e limite de cheque especial
@@ -57,15 +69,20 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
     },
   });
   
-  // Update form when user changes
+  // Update form when user changes or modal opens
   useEffect(() => {
-    if (user) {
+    if (user && isOpen) {
+      console.log('Atualizando formulário com valores do usuário:', {
+        initialBalance: getCurrentInitialBalance(),
+        overdraftLimit: getCurrentOverdraftLimit(),
+      });
+      
       form.reset({
         initialBalance: getCurrentInitialBalance(),
         overdraftLimit: getCurrentOverdraftLimit(),
       });
     }
-  }, [user]);
+  }, [user, isOpen]); // Adicionando isOpen como dependência para garantir atualização quando o modal abrir
   
   // Update account settings mutation
   const updateSettings = useMutation({
