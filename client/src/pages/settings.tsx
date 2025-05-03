@@ -27,11 +27,19 @@ interface SettingsProps {
   onUserUpdate: (userId: number) => Promise<any>;
 }
 
-export default function Settings({ userId, user, onUserUpdate }: SettingsProps) {
+export default function Settings({ userId, user: initialUser, onUserUpdate }: SettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [accountSettingsModalOpen, setAccountSettingsModalOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  
+  // Buscar dados do usuário diretamente da API para sempre ter a versão mais atualizada
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: [`/api/user/${userId}`],
+    initialData: initialUser, // Usa os dados iniciais enquanto carrega
+    refetchInterval: 1000, // Recarrega os dados a cada 1 segundo para garantir que a página fique sempre atualizada
+    refetchOnWindowFocus: true, // Recarrega quando a janela recebe foco
+  });
   
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
@@ -166,6 +174,10 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
       // Atualiza os dados do usuário no contexto principal
       console.log('Atualizando dados do usuário no contexto principal');
       await onUserUpdate(userId);
+      
+      // Forçar nova consulta dos dados do usuário na página de configurações
+      console.log('Forçando nova consulta dos dados do usuário na página de configurações');
+      queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
       
       // Força uma atualização geral após 500ms para garantir que os dados se propaguem
       setTimeout(() => {
