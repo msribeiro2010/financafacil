@@ -126,12 +126,14 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
   };
   
   const handleResetData = async () => {
+    console.log('DEBUG: Função handleResetData iniciada');
     setResetConfirmOpen(false);
     
     try {
       console.log(`Iniciando reset de dados para usuário ${userId}`);
       
       // Usa a API request do queryClient para garantir consistência
+      console.log('DEBUG: Importando apiRequest...');
       const { apiRequest } = await import('@/lib/queryClient');
       
       console.log('Chamando API de reset de dados...');
@@ -379,7 +381,10 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleResetData}
+              onClick={() => {
+                console.log('Botão de confirmação clicado, chamando handleResetData...');
+                handleResetData();
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Sim, redefinir tudo
