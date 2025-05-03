@@ -93,18 +93,30 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
     }
   });
   
-  // Função para validar e formatar valores monetários
-  const formatMonetaryValue = (value: string): string => {
-    // Substitui vírgula por ponto
-    let formatted = value.replace(',', '.');
+  // Função para validar e formatar valores monetários com tratamento mais rigoroso
+  const formatMonetaryValue = (value: string | number | null | undefined): string => {
+    // Garante que temos uma string para trabalhar
+    if (value === null || value === undefined) {
+      return '0.00';
+    }
     
-    // Verifica se é um número válido
-    if (isNaN(parseFloat(formatted))) {
-      return '0';
+    // Converte para string se for número
+    const strValue = typeof value === 'number' ? value.toString() : value;
+    
+    // Substitui vírgula por ponto
+    let formatted = strValue.replace(',', '.');
+    
+    // Remove caracteres não numéricos exceto o ponto decimal
+    formatted = formatted.replace(/[^\d.]/g, '');
+    
+    // Verificar se é um número válido
+    const numValue = parseFloat(formatted);
+    if (isNaN(numValue)) {
+      return '0.00';
     }
     
     // Garante que o valor tenha duas casas decimais
-    return parseFloat(formatted).toFixed(2);
+    return numValue.toFixed(2);
   };
   
   if (isLoading) {

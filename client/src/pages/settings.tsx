@@ -199,7 +199,9 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
                 {!user ? (
                   <Skeleton className="h-7 w-32" />
                 ) : (
-                  <p className="text-xl font-medium">{formatCurrency(parseFloat(user.initialBalance))}</p>
+                  <p className="text-xl font-medium">
+                    {formatCurrency(parseFloat(user?.initialBalance || user?.initial_balance || '0'))}
+                  </p>
                 )}
                 <p className="text-xs text-slate-500 mt-1">
                   Ponto de partida para os cálculos financeiros.
@@ -211,7 +213,9 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
                 {!user ? (
                   <Skeleton className="h-7 w-32" />
                 ) : (
-                  <p className="text-xl font-medium">{formatCurrency(parseFloat(user.overdraftLimit))}</p>
+                  <p className="text-xl font-medium">
+                    {formatCurrency(parseFloat(user?.overdraftLimit || user?.overdraft_limit || '0'))}
+                  </p>
                 )}
                 <p className="text-xs text-slate-500 mt-1">
                   Valor disponível como limite de cheque especial.
@@ -325,16 +329,32 @@ export default function Settings({ userId, user, onUserUpdate }: SettingsProps) 
         isOpen={accountSettingsModalOpen} 
         onClose={() => {
           setAccountSettingsModalOpen(false);
+          
           // Atualiza os dados do usuário quando o modal é fechado
-          onUserUpdate(userId).then(() => {
-            // Atualiza as queries relacionadas após a atualização do usuário
-            queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
-            queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+          console.log('Modal fechado, atualizando dados do usuário');
+          
+          // Força a invalidar as consultas para garantir dados atualizados
+          queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+          queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+
+          // Atualiza os dados do usuário através da função fornecida pelo App.tsx
+          onUserUpdate(userId).then((updatedUser) => {
+            console.log('Dados do usuário atualizados após fechamento do modal:', updatedUser);
             
-            toast({
-              title: "Dados atualizados",
-              description: "As configurações da conta foram atualizadas com sucesso."
-            });
+            if (updatedUser) {
+              // Atualiza o cache com os novos dados, garantindo que os valores são mostrados corretamente
+              queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
+              
+              // Força uma nova atualização global após um pequeno delay para garantir consistência
+              setTimeout(() => {
+                queryClient.invalidateQueries();
+              }, 300);
+              
+              toast({
+                title: "Dados atualizados",
+                description: "As configurações da conta foram atualizadas com sucesso."
+              });
+            }
           });
         }} 
         userId={userId}

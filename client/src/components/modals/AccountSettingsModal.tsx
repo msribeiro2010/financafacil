@@ -167,12 +167,30 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
     }
   });
   
-  // Form submission - importante invalidar o cache imediatamente
+  // Form submission - importante invalidar o cache imediatamente 
   const onSubmit = (data: z.infer<typeof accountSettingsSchema>) => {
-    console.log('Submetendo novo saldo inicial:', data.initialBalance);
-    // Pré-invalida o cache para forçar uma atualização completa
+    console.log('Submetendo novos valores:', {
+      initialBalance: data.initialBalance,
+      overdraftLimit: data.overdraftLimit
+    });
+    
+    // Cria uma cópia local do usuário com os novos valores para atualização otimista da UI
+    const updatedUserPreview = {
+      ...user,
+      initialBalance: data.initialBalance,
+      overdraftLimit: data.overdraftLimit,
+      initial_balance: data.initialBalance,
+      overdraft_limit: data.overdraftLimit
+    };
+    
+    // Atualiza o cache imediatamente com os valores novos (otimista)
+    queryClient.setQueryData([`/api/user/${userId}`], updatedUserPreview);
+    
+    // Pré-invalida o cache para forçar uma atualização completa após a resposta do servidor
     queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
     queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+    
+    // Submete a atualização para o servidor
     updateSettings.mutate(data);
   };
   
