@@ -277,7 +277,7 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
                 {transactionsLoading ? (
                   <Skeleton className="h-7 w-16" />
                 ) : (
-                  <p className="text-xl font-medium">{transactions?.length || 0}</p>
+                  <p className="text-xl font-medium">{transactions && Array.isArray(transactions) ? transactions.length : 0}</p>
                 )}
                 <p className="text-xs text-slate-500 mt-1">Total de transações registradas.</p>
               </div>
@@ -287,7 +287,7 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
                 {recurringLoading ? (
                   <Skeleton className="h-7 w-16" />
                 ) : (
-                  <p className="text-xl font-medium">{recurringTransactions?.length || 0}</p>
+                  <p className="text-xl font-medium">{recurringTransactions && Array.isArray(recurringTransactions) ? recurringTransactions.length : 0}</p>
                 )}
                 <p className="text-xs text-slate-500 mt-1">Total de transações recorrentes.</p>
               </div>
@@ -363,41 +363,39 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
       </Card>
       
       {/* Modals */}
-      <AccountSettingsModal 
-        isOpen={accountSettingsModalOpen} 
-        onClose={() => {
-          setAccountSettingsModalOpen(false);
-          
-          // Atualiza os dados do usuário quando o modal é fechado
-          console.log('Modal fechado, atualizando dados do usuário');
-          
-          // Força a invalidar as consultas para garantir dados atualizados
-          queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
-          queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-
-          // Atualiza os dados do usuário através da função fornecida pelo App.tsx
-          onUserUpdate(userId).then((updatedUser) => {
-            console.log('Dados do usuário atualizados após fechamento do modal:', updatedUser);
+      {/* Renderiza o modal apenas se accountSettingsModalOpen for true */}
+      {accountSettingsModalOpen && (
+        <AccountSettingsModal 
+          isOpen={true} 
+          onClose={() => {
+            console.log('Callback onClose do AccountSettingsModal chamado');
             
-            if (updatedUser) {
-              // Atualiza o cache com os novos dados, garantindo que os valores são mostrados corretamente
-              queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
+            // Primeiro atualizamos dados 
+            queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+            queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+            
+            // Atualiza os dados do usuário através da função fornecida pelo App.tsx
+            onUserUpdate(userId).then((updatedUser) => {
+              console.log('Dados do usuário atualizados após fechamento do modal:', updatedUser);
               
-              // Força uma nova atualização global após um pequeno delay para garantir consistência
-              setTimeout(() => {
-                queryClient.invalidateQueries();
-              }, 300);
-              
-              toast({
-                title: "Dados atualizados",
-                description: "As configurações da conta foram atualizadas com sucesso."
-              });
-            }
-          });
-        }} 
-        userId={userId}
-        user={user}
-      />
+              if (updatedUser) {
+                // Atualiza o cache com os novos dados
+                queryClient.setQueryData([`/api/user/${userId}`], updatedUser);
+                
+                toast({
+                  title: "Dados atualizados",
+                  description: "As configurações da conta foram atualizadas com sucesso."
+                });
+              }
+            });
+            
+            // Fechamos o modal depois que tudo estiver processado
+            setAccountSettingsModalOpen(false);
+          }} 
+          userId={userId}
+          user={user}
+        />
+      )}
       
       <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
         <AlertDialogContent>

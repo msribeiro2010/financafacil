@@ -199,14 +199,8 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
   return (
     <Dialog 
       open={isOpen} 
-      onOpenChange={(open) => {
-        console.log('Dialog onOpenChange:', open);
-        // Só fechamos o modal se ele estiver aberto (isOpen === true) e a mudança for para fechá-lo (open === false)
-        if (isOpen && !open) {
-          console.log('Fechando modal via onOpenChange');
-          setTimeout(() => onClose(), 100); // Pequeno atraso para evitar problemas de sincronização
-        }
-      }}
+      // Desabilitamos o onOpenChange para ter controle completo sobre o fechamento
+      // e evitar fechamentos automáticos indesejados
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
