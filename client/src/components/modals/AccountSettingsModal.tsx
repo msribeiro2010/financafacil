@@ -140,14 +140,16 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
         setTimeout(() => {
           queryClient.invalidateQueries();
           console.log('Cache completamente invalidado');
+          
+          // Aqui fechamos o modal apenas depois que todas as atualizações foram aplicadas
+          onClose();
+          
+          toast({
+            title: 'Sucesso',
+            description: 'Configurações da conta atualizadas com sucesso!',
+          });
         }, 500);
         
-        toast({
-          title: 'Sucesso',
-          description: 'Configurações da conta atualizadas com sucesso!',
-        });
-        
-        onClose();
       } catch (error) {
         console.error('Erro ao processar resposta:', error);
         toast({
@@ -195,9 +197,17 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
-    }}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        console.log('Dialog onOpenChange:', open);
+        // Só fechamos o modal se ele estiver aberto (isOpen === true) e a mudança for para fechá-lo (open === false)
+        if (isOpen && !open) {
+          console.log('Fechando modal via onOpenChange');
+          setTimeout(() => onClose(), 100); // Pequeno atraso para evitar problemas de sincronização
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Configurações da Conta</DialogTitle>
@@ -301,7 +311,14 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
             />
             
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  console.log('Botão Cancelar clicado');
+                  setTimeout(() => onClose(), 100); // Atraso pequeno para evitar problemas de sincronização
+                }}
+              >
                 Cancelar
               </Button>
               <Button 
