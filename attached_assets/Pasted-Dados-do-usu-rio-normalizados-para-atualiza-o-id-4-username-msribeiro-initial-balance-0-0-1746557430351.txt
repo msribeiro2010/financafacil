@@ -1,0 +1,24 @@
+Dados do usuário normalizados para atualização: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Dados do usuário recebidos: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Buscando dados atualizados do usuário na página de configurações
+index-BvJBaJl0.js:1767 Atualizando dados do usuário: 4
+index-BvJBaJl0.js:1767 Dados do usuário atualizados: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:1767 Dados do usuário normalizados para atualização: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Dados do usuário recebidos: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Buscando dados atualizados do usuário na página de configurações
+index-BvJBaJl0.js:1767 Atualizando dados do usuário: 4
+index-BvJBaJl0.js:1767 Dados do usuário atualizados: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:1767 Dados do usuário normalizados para atualização: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Dados do usuário recebidos: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Buscando dados atualizados do usuário na página de configurações
+index-BvJBaJl0.js:1767 Atualizando dados do usuário: 4
+index-BvJBaJl0.js:1767 Dados do usuário atualizados: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:1767 Dados do usuário normalizados para atualização: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Dados do usuário recebidos: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Buscando dados atualizados do usuário na página de configurações
+index-BvJBaJl0.js:1767 Atualizando dados do usuário: 4
+index-BvJBaJl0.js:1767 Dados do usuário atualizados: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:1767 Dados do usuário normalizados para atualização: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Dados do usuário recebidos: {id: 4, username: 'msribeiro', initial_balance: '0.00', overdraft_limit: '0.00', created_at: '2025-05-03T21:49:15.335Z', …}
+index-BvJBaJl0.js:402 Buscando dados atualizados do usuário na página de configurações
+index-BvJBaJl0.js:1767 Atualizando dados do usuário: 4
