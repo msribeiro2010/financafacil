@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { accountSettingsSchema } from '@shared/schema';
 import { z } from 'zod';
 
@@ -196,19 +195,29 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
     updateSettings.mutate(data);
   };
   
+  if (!isOpen) return null;
+  
   return (
-    <Dialog 
-      open={isOpen} 
-      // Desabilitamos o onOpenChange para ter controle completo sobre o fechamento
-      // e evitar fechamentos automáticos indesejados
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Configurações da Conta</DialogTitle>
-          <DialogDescription>
-            Ajuste as configurações financeiras da sua conta.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Overlay/backdrop que impede cliques no fundo */}
+      <div className="fixed inset-0 bg-black/80" />
+      
+      {/* Conteúdo do modal */}
+      <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-50">
+        {/* Cabeçalho com botão de fechar */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-lg font-semibold">Configurações da Conta</h2>
+            <p className="text-sm text-gray-500">Ajuste as configurações financeiras da sua conta.</p>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => onClose()}
+            className="rounded-full p-1 hover:bg-gray-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -304,14 +313,12 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
               )}
             />
             
-            <DialogFooter>
+            {/* Botões de ação no rodapé */}
+            <div className="flex justify-end space-x-2 pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => {
-                  console.log('Botão Cancelar clicado');
-                  setTimeout(() => onClose(), 100); // Atraso pequeno para evitar problemas de sincronização
-                }}
+                onClick={() => onClose()}
               >
                 Cancelar
               </Button>
@@ -324,11 +331,11 @@ export function AccountSettingsModal({ isOpen, onClose, userId, user }: AccountS
                 )}
                 Salvar
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 

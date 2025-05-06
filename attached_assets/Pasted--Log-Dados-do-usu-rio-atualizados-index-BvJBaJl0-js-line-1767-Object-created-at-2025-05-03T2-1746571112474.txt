@@ -1,0 +1,36 @@
+[Log] Dados do usuário atualizados: (index-BvJBaJl0.js, line 1767)
+Object
+
+created_at: "2025-05-03T21:49:15.335Z"
+
+email: "msribeiro2010@icloud.com"
+
+id: 4
+
+initial_balance: "0.00"
+
+overdraft_limit: "0.00"
+
+username: "msribeiro"
+
+Protótipo Object
+[Log] Dados do usuário normalizados para atualização: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 1767)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Dados do usuário recebidos: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 402)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Buscando dados atualizados do usuário na página de configurações (index-BvJBaJl0.js, line 402)
+[Log] Atualizando dados do usuário: – 4 (index-BvJBaJl0.js, line 1767)
+[Log] Dados do usuário atualizados: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 1767)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Dados do usuário normalizados para atualização: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 1767)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Dados do usuário recebidos: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 402)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Buscando dados atualizados do usuário na página de configurações (index-BvJBaJl0.js, line 402)
+[Log] Atualizando dados do usuário: – 4 (index-BvJBaJl0.js, line 1767)
+[Log] Dados do usuário atualizados: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 1767)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Dados do usuário normalizados para atualização: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 1767)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
+[Log] Dados do usuário recebidos: – {id: 4, username: "msribeiro", initial_balance: "0.00", …} (index-BvJBaJl0.js, line 402)
+{id: 4, username: "msribeiro", initial_balance: "0.00", overdraft_limit: "0.00", created_at: "2025-05-03T21:49:15.335Z", …}Object
