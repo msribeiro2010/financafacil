@@ -3,12 +3,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Save, Upload, Download, Trash2 } from 'lucide-react';
+import { AlertCircle, Save, Upload, Download, Trash2, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import AccountSettingsModal from '@/components/modals/AccountSettingsModal';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -159,8 +160,7 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
       console.log(`Iniciando reset de dados para usuário ${userId}`);
       
       // Usa a API request do queryClient para garantir consistência
-      console.log('DEBUG: Importando apiRequest...');
-      const { apiRequest } = await import('@/lib/queryClient');
+      console.log('DEBUG: Utilizando apiRequest já importado');
       
       console.log('Chamando API de reset de dados...');
       // Chama a API para redefinir os dados do usuário
