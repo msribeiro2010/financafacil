@@ -32,30 +32,23 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
   const queryClient = useQueryClient();
   const [showAccountSettingsForm, setShowAccountSettingsForm] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  
-  // Efeito para forçar uma atualização dos dados do usuário ao carregar a página
-  useEffect(() => {
-    const fetchLatestUserData = async () => {
-      try {
-        console.log('Buscando dados atualizados do usuário na página de configurações');
-        const updatedUser = await onUserUpdate(userId);
-        console.log('Dados do usuário recebidos:', updatedUser);
-      } catch (error) {
-        console.error('Erro ao buscar dados do usuário:', error);
-      }
-    };
-    
-    fetchLatestUserData();
-  }, [userId, onUserUpdate]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Buscar dados do usuário diretamente da API para sempre ter a versão mais atualizada
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: [`/api/user/${userId}`],
     initialData: initialUser, // Usa os dados iniciais enquanto carrega
     // Removemos o refetchInterval para evitar que os placares fiquem piscando
-    refetchOnWindowFocus: true, // Recarrega quando a janela recebe foco
+    refetchOnWindowFocus: false, // Desativamos o recarregamento automático ao receber foco
     staleTime: 30000, // Considera os dados válidos por 30 segundos
   });
+  
+  // Efeito para marcar os dados como carregados
+  useEffect(() => {
+    if (user && !dataLoaded) {
+      setDataLoaded(true);
+    }
+  }, [user, dataLoaded]);
   
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
@@ -256,13 +249,18 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
               console.log('Resposta da API:', response.status, response.ok);
               
               if (response.ok) {
-                // Atualiza os dados localmente
-                queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
-                queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+                // Obter a resposta da API para atualizar o cache localmente
+                const result = await response.json();
+                console.log('Dados recebidos da API:', result);
                 
-                // Atualiza os dados do usuário
-                const updatedUser = await onUserUpdate(userId);
-                console.log('Dados do usuário atualizados:', updatedUser);
+                // Atualizar o cache com os novos dados sem provocar novos pedidos à API
+                queryClient.setQueryData([`/api/user/${userId}`], result);
+                
+                // Apenas notificar outras partes da aplicação que os dados foram alterados
+                // sem forçar uma nova busca agora
+                setTimeout(() => {
+                  queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+                }, 500);
                 
                 toast({
                   title: "Dados atualizados",
