@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,23 +32,14 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
   const queryClient = useQueryClient();
   const [showAccountSettingsForm, setShowAccountSettingsForm] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Buscar dados do usuário diretamente da API para sempre ter a versão mais atualizada
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: [`/api/user/${userId}`],
     initialData: initialUser, // Usa os dados iniciais enquanto carrega
-    // Removemos o refetchInterval para evitar que os placares fiquem piscando
     refetchOnWindowFocus: false, // Desativamos o recarregamento automático ao receber foco
     staleTime: 30000, // Considera os dados válidos por 30 segundos
   });
-  
-  // Efeito para marcar os dados como carregados
-  useEffect(() => {
-    if (user && !dataLoaded) {
-      setDataLoaded(true);
-    }
-  }, [user, dataLoaded]);
   
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
@@ -181,18 +172,10 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
       queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
       queryClient.invalidateQueries({queryKey: [`/api/category-summary/${userId}`]});
       
-      // Atualiza os dados do usuário no contexto principal
-      console.log('Atualizando dados do usuário no contexto principal');
-      await onUserUpdate(userId);
-      
-      // Forçar nova consulta dos dados do usuário na página de configurações
-      console.log('Forçando nova consulta dos dados do usuário na página de configurações');
-      queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
-      
-      // Força uma atualização geral após 500ms para garantir que os dados se propaguem
+      // Força uma atualização apenas dos dados necessários
       setTimeout(() => {
-        console.log('Forçando atualização geral de dados');
-        queryClient.invalidateQueries();
+        console.log('Forçando atualização dos dados necessários');
+        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
       }, 500);
       
       console.log('Exibindo toast de sucesso');
