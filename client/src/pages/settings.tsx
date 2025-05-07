@@ -126,9 +126,17 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
           await onUserUpdate(userId);
         }
         
-        // Invalidar todas as consultas relevantes para garantir que os dados estejam sincronizados
-        // em toda a aplicação
-        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+        // Verificar se recebemos o resumo financeiro na resposta
+        if (result.summary) {
+          console.log('Resumo financeiro recebido do servidor:', result.summary);
+          // Atualizar diretamente o cache do resumo financeiro
+          queryClient.setQueryData([`/api/summary/${userId}`], result.summary);
+        } else {
+          // Caso contrário, invalidar para forçar uma nova busca
+          queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+        }
+        
+        // Invalidar outras consultas relacionadas
         queryClient.invalidateQueries({queryKey: [`/api/category-summary/${userId}`]});
         
         toast({
