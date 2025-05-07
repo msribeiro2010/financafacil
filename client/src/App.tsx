@@ -34,6 +34,9 @@ function App() {
         ...updatedUser,
         initialBalance: updatedUser.initial_balance,
         overdraftLimit: updatedUser.overdraft_limit,
+        // Garantir que ambos os formatos estejam disponíveis
+        initial_balance: updatedUser.initial_balance,
+        overdraft_limit: updatedUser.overdraft_limit,
       };
       
       console.log('Dados do usuário normalizados para atualização:', normalizedUser);
@@ -44,12 +47,21 @@ function App() {
       // Atualizar o cache do React Query para sincronização com componentes
       queryClient.setQueryData([`/api/user/${userId}`], normalizedUser);
       
+      // Importante: Invalidar queries relacionadas para garantir que todos os componentes tenham
+      // acesso aos dados atualizados, especialmente o dashboard
+      queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+      
+      // Forçar invalidação da query de resumo para garantir que o dashboard atualize
+      setTimeout(() => {
+        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+      }, 500);
+      
       return normalizedUser;
     } catch (error) {
       console.error('Erro ao atualizar dados do usuário:', error);
       return null;
     }
-  }, []);
+  }, [queryClient]);
   
   // Função para lidar com o login bem-sucedido
   const handleLogin = (userData: any) => {

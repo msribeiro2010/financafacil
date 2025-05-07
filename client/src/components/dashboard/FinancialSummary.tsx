@@ -18,13 +18,20 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
   
   const { data: summary, isLoading } = useQuery<any>({
     queryKey: [`/api/summary/${userId}`],
-    refetchInterval: 2000,
+    // Configurações ajustadas para atualização mais rápida
+    refetchInterval: 1000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
+    staleTime: 0, // Considera os dados sempre obsoletos para garantir atualizações
   });
   
   const { data: user } = useQuery<any>({
     queryKey: [`/api/user/${userId}`],
+    // Configurações ajustadas para atualização mais rápida
+    refetchInterval: 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Considera os dados sempre obsoletos para garantir atualizações
   });
   
   // Atualizar configurações do usuário

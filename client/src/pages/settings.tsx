@@ -98,14 +98,26 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
         const result = await response.json();
         console.log('Dados recebidos da API:', result);
         
-        // Atualizar o cache com os novos dados sem provocar novos pedidos à API
-        queryClient.setQueryData([`/api/user/${userId}`], result);
+        // Normalizar os dados para que funcionem em todo o aplicativo
+        const normalizedResult = {
+          ...result,
+          initialBalance: result.initial_balance,
+          overdraftLimit: result.overdraft_limit
+        };
         
-        // Apenas notificar outras partes da aplicação que os dados foram alterados
-        // sem forçar uma nova busca agora
-        setTimeout(() => {
-          queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-        }, 500);
+        // Atualizar o cache com os novos dados normalizados
+        queryClient.setQueryData([`/api/user/${userId}`], normalizedResult);
+        
+        // Importante: Chama a função onUserUpdate fornecida pelo App.tsx
+        // Esta é a parte crucial que faltava para que o Dashboard fosse atualizado
+        if (onUserUpdate) {
+          await onUserUpdate(userId);
+        }
+        
+        // Invalidar todas as consultas relevantes para garantir que os dados estejam sincronizados
+        // em toda a aplicação
+        queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+        queryClient.invalidateQueries({queryKey: [`/api/category-summary/${userId}`]});
         
         toast({
           title: "Dados atualizados",
