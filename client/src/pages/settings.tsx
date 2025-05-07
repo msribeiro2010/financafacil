@@ -98,12 +98,24 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
         const result = await response.json();
         console.log('Dados recebidos da API:', result);
         
+        // Verificar se estamos recebendo a estrutura esperada
+        console.log('Resultado da atualização de configurações:', result);
+        
+        // Extrair dados do usuário - assegurando que temos o objeto user
+        const userData = result.user || result;
+        
         // Normalizar os dados para que funcionem em todo o aplicativo
+        // Fazendo verificações mais rigorosas
         const normalizedResult = {
-          ...result,
-          initialBalance: result.initial_balance,
-          overdraftLimit: result.overdraft_limit
+          ...userData,
+          // Garantir que ambos os formatos estejam disponíveis
+          initialBalance: userData.initial_balance || userData.initialBalance || '0',
+          overdraftLimit: userData.overdraft_limit || userData.overdraftLimit || '0',
+          initial_balance: userData.initial_balance || userData.initialBalance || '0',
+          overdraft_limit: userData.overdraft_limit || userData.overdraftLimit || '0'
         };
+        
+        console.log('Dados normalizados para cache:', normalizedResult);
         
         // Atualizar o cache com os novos dados normalizados
         queryClient.setQueryData([`/api/user/${userId}`], normalizedResult);

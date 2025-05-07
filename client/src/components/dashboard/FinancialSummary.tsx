@@ -249,15 +249,16 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
                                 // Atualiza o cache do usuário
                                 queryClient.setQueryData([`/api/user/${userId}`], normalizedUser);
                                 
-                                // Atualiza o resumo financeiro
-                                const summary = queryClient.getQueryData([`/api/summary/${userId}`]);
-                                if (summary) {
-                                  const updatedSummary = {
-                                    ...summary,
-                                    currentBalance: parseFloat(initialBalance),
-                                  };
-                                  queryClient.setQueryData([`/api/summary/${userId}`], updatedSummary);
-                                }
+                                // Em vez de apenas alterar o valor no cache, vamos limpar 
+                                // os dados do cache para forçar uma nova busca
+                                queryClient.removeQueries({queryKey: [`/api/summary/${userId}`]});
+                                
+                                // Após remover, forçamos uma nova busca
+                                setTimeout(() => {
+                                  queryClient.fetchQuery({
+                                    queryKey: [`/api/summary/${userId}`]
+                                  });
+                                }, 100);
                                 
                                 // Força uma completa revalidação
                                 queryClient.invalidateQueries();

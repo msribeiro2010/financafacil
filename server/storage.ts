@@ -255,9 +255,27 @@ export class DatabaseStorage implements IStorage {
     const { dbWithExtensions } = await import('./db');
     const transactions = await dbWithExtensions.getTransactions(userId);
     
-    // Parse numeric values
-    const initialBalance = parseFloat(user.initialBalance as string || user.initial_balance as string || '0');
-    const overdraftLimit = parseFloat(user.overdraftLimit as string || user.overdraft_limit as string || '0'); // Garante que o limite nunca é NaN
+    // Parse numeric values - resolvendo o problema de precedência com o operador ||
+    const initialBalanceStr = user.initialBalance || user.initial_balance || '0';
+    const overdraftLimitStr = user.overdraftLimit || user.overdraft_limit || '0';
+    
+    console.log('DEBUG [getTransactionSummary] Valores encontrados:', {
+      initialBalanceRaw: user.initialBalance,
+      initial_balanceRaw: user.initial_balance,
+      initialBalanceStr,
+      overdraftLimitRaw: user.overdraftLimit,
+      overdraft_limitRaw: user.overdraft_limit,
+      overdraftLimitStr
+    });
+    
+    // Convertendo para números
+    const initialBalance = parseFloat(initialBalanceStr);
+    const overdraftLimit = parseFloat(overdraftLimitStr); // Garante que o limite nunca é NaN
+    
+    console.log('DEBUG [getTransactionSummary] Valores convertidos:', {
+      initialBalance,
+      overdraftLimit
+    });
     
     let totalIncome = 0;
     let totalExpenses = 0;
