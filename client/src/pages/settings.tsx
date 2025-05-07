@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Upload, Download, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { AlertCircle, Upload, Download, Trash2, Save, Edit, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
 import { useQuery } from '@tanstack/react-query';
@@ -30,8 +30,13 @@ interface SettingsProps {
 export default function Settings({ userId, user: initialUser, onUserUpdate }: SettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showAccountSettingsForm, setShowAccountSettingsForm] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  
+  // Estados para edição direta na página
+  const [isEditing, setIsEditing] = useState(false);
+  const [initialBalance, setInitialBalance] = useState('');
+  const [overdraftLimit, setOverdraftLimit] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   
   // Buscar dados do usuário diretamente da API para sempre ter a versão mais atualizada
   const { data: user, isLoading: userLoading } = useQuery({
@@ -51,12 +56,77 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
     staleTime: 30000, // Considera os dados válidos por 30 segundos
   });
   
-  const handleEditAccountSettings = () => {
-    // Força uma atualização dos dados do usuário antes de mostrar o formulário
-    // para garantir que os valores exibidos são os mais recentes
-    queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
-    queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-    setShowAccountSettingsForm(true);
+  // Função para iniciar a edição
+  const handleStartEditing = () => {
+    if (user) {
+      // Formata os valores para exibição no formato brasileiro ao iniciar a edição
+      setInitialBalance(parseFloat(user.initialBalance || user.initial_balance || '0').toFixed(2).replace('.', ','));
+      setOverdraftLimit(parseFloat(user.overdraftLimit || user.overdraft_limit || '0').toFixed(2).replace('.', ','));
+      setIsEditing(true);
+    }
+  };
+  
+  // Função para cancelar a edição
+  const handleCancelEditing = () => {
+    setIsEditing(false);
+  };
+  
+  // Função para salvar as alterações
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    
+    try {
+      // Converte os valores de volta para o formato da API (com ponto decimal)
+      const formattedInitialBalance = initialBalance.replace(',', '.');
+      const formattedOverdraftLimit = overdraftLimit.replace(',', '.');
+      
+      console.log('Enviando requisição para atualizar configurações:', { 
+        initialBalance: formattedInitialBalance, 
+        overdraftLimit: formattedOverdraftLimit 
+      });
+      
+      // Envia requisição para a API
+      const response = await apiRequest('PATCH', `/api/user/${userId}/settings`, {
+        initialBalance: formattedInitialBalance,
+        overdraftLimit: formattedOverdraftLimit
+      });
+      
+      console.log('Resposta da API:', response.status, response.ok);
+      
+      if (response.ok) {
+        // Obter a resposta da API para atualizar o cache localmente
+        const result = await response.json();
+        console.log('Dados recebidos da API:', result);
+        
+        // Atualizar o cache com os novos dados sem provocar novos pedidos à API
+        queryClient.setQueryData([`/api/user/${userId}`], result);
+        
+        // Apenas notificar outras partes da aplicação que os dados foram alterados
+        // sem forçar uma nova busca agora
+        setTimeout(() => {
+          queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+        }, 500);
+        
+        toast({
+          title: "Dados atualizados",
+          description: "As configurações da conta foram atualizadas com sucesso."
+        });
+        
+        // Encerra o modo de edição
+        setIsEditing(false);
+      } else {
+        throw new Error("Falha ao atualizar configurações");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar configurações:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao atualizar as configurações.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   const handleExportData = () => {
@@ -72,8 +142,8 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
     const exportData = {
       user: {
         username: user.username,
-        initialBalance: user.initialBalance,
-        overdraftLimit: user.overdraftLimit,
+        initialBalance: user.initialBalance || user.initial_balance,
+        overdraftLimit: user.overdraftLimit || user.overdraft_limit,
       },
       transactions,
       recurringTransactions,
@@ -193,145 +263,67 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
     }
   };
 
-  // Função para renderizar o formulário de configurações da conta
-  const renderAccountSettingsForm = () => {
+  // Função para renderizar a seção de configurações da conta
+  const renderAccountSettings = () => {
     return (
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Editar Configurações</CardTitle>
-              <CardDescription>
-                Atualize seus valores iniciais e limites
-              </CardDescription>
-            </div>
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowAccountSettingsForm(false)}
-              className="h-8 w-8 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const initialBalance = formData.get('initialBalance')?.toString() || '0.00';
-            const overdraftLimit = formData.get('overdraftLimit')?.toString() || '0.00';
-            
-            try {
-              console.log('Enviando requisição para atualizar configurações:', { initialBalance, overdraftLimit });
-              // Envia requisição para a API
-              const response = await apiRequest('PATCH', `/api/user/${userId}/settings`, {
-                initialBalance,
-                overdraftLimit
-              });
-              
-              console.log('Resposta da API:', response.status, response.ok);
-              
-              if (response.ok) {
-                // Obter a resposta da API para atualizar o cache localmente
-                const result = await response.json();
-                console.log('Dados recebidos da API:', result);
-                
-                // Atualizar o cache com os novos dados sem provocar novos pedidos à API
-                queryClient.setQueryData([`/api/user/${userId}`], result);
-                
-                // Apenas notificar outras partes da aplicação que os dados foram alterados
-                // sem forçar uma nova busca agora
-                setTimeout(() => {
-                  queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-                }, 500);
-                
-                toast({
-                  title: "Dados atualizados",
-                  description: "As configurações da conta foram atualizadas com sucesso."
-                });
-                
-                // Volta para a tela principal
-                setShowAccountSettingsForm(false);
-              } else {
-                throw new Error("Falha ao atualizar configurações");
-              }
-            } catch (error) {
-              console.error("Erro ao atualizar configurações:", error);
-              toast({
-                title: "Erro",
-                description: "Ocorreu um erro ao atualizar as configurações.",
-                variant: "destructive"
-              });
-            }
-          }}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="initialBalance" className="block text-sm font-medium text-gray-700">
-                  Saldo Inicial (R$)
-                </label>
+      <div>
+        <h3 className="text-lg font-medium mb-4">Configurações da Conta</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+          {isEditing ? (
+            // Modo de edição
+            <>
+              <div className="p-4 border rounded-lg">
+                <h4 className="text-sm font-medium text-slate-500 mb-2">Saldo Inicial (R$)</h4>
                 <input
                   type="text"
-                  id="initialBalance"
-                  name="initialBalance"
-                  defaultValue={parseFloat(user?.initialBalance || user?.initial_balance || '0').toFixed(2).replace('.', ',')}
-                  className="px-3 py-2 border border-gray-300 rounded-md w-full"
+                  value={initialBalance}
+                  onChange={(e) => setInitialBalance(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full text-xl font-medium"
+                  placeholder="0,00"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500 mt-1">
                   Este valor será considerado como seu ponto de partida para cálculos.
                 </p>
               </div>
               
-              <div className="space-y-2">
-                <label htmlFor="overdraftLimit" className="block text-sm font-medium text-gray-700">
-                  Limite de Cheque Especial (R$)
-                </label>
+              <div className="p-4 border rounded-lg">
+                <h4 className="text-sm font-medium text-slate-500 mb-2">Limite de Cheque Especial (R$)</h4>
                 <input
                   type="text"
-                  id="overdraftLimit"
-                  name="overdraftLimit"
-                  defaultValue={parseFloat(user?.overdraftLimit || user?.overdraft_limit || '0').toFixed(2).replace('.', ',')}
-                  className="px-3 py-2 border border-gray-300 rounded-md w-full"
+                  value={overdraftLimit}
+                  onChange={(e) => setOverdraftLimit(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full text-xl font-medium"
+                  placeholder="0,00"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500 mt-1">
                   Defina o valor disponível como limite de cheque especial.
                 </p>
               </div>
               
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="col-span-2 flex justify-end space-x-3">
                 <Button 
                   type="button"
                   variant="outline"
-                  onClick={() => setShowAccountSettingsForm(false)}
+                  onClick={handleCancelEditing}
+                  disabled={isSaving}
                 >
+                  <X className="mr-2 h-4 w-4" />
                   Cancelar
                 </Button>
-                <Button type="submit" className="flex items-center">
+                <Button 
+                  type="button"
+                  onClick={handleSaveSettings}
+                  disabled={isSaving}
+                  className="flex items-center"
+                >
                   <Save className="mr-2 h-4 w-4" />
-                  Salvar
+                  {isSaving ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Função para renderizar a tela principal de configurações
-  const renderMainSettings = () => {
-    return (
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Configurações</CardTitle>
-          <CardDescription>
-            Gerencie suas configurações financeiras e dados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Account Settings */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Configurações da Conta</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            </>
+          ) : (
+            // Modo de visualização
+            <>
               <div className="p-4 border rounded-lg">
                 <h4 className="text-sm font-medium text-slate-500 mb-2">Saldo Inicial</h4>
                 {!user ? (
@@ -359,12 +351,33 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
                   Valor disponível como limite de cheque especial.
                 </p>
               </div>
-            </div>
-            
-            <Button onClick={handleEditAccountSettings}>
-              Editar Configurações da Conta
-            </Button>
-          </div>
+              
+              <div className="col-span-2">
+                <Button onClick={handleStartEditing} className="flex items-center">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar Configurações da Conta
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <>
+      {/* Tela principal de configurações */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Configurações</CardTitle>
+          <CardDescription>
+            Gerencie suas configurações financeiras e dados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Account Settings */}
+          {renderAccountSettings()}
           
           <Separator />
           
@@ -397,7 +410,7 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
                 {!user ? (
                   <Skeleton className="h-7 w-32" />
                 ) : (
-                  <p className="text-xl font-medium">{formatDate(user.createdAt)}</p>
+                  <p className="text-xl font-medium">{formatDate(user.createdAt || user.created_at)}</p>
                 )}
                 <p className="text-xs text-slate-500 mt-1">Data de criação da sua conta.</p>
               </div>
@@ -461,13 +474,6 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
           </div>
         </CardContent>
       </Card>
-    );
-  };
-  
-  return (
-    <>
-      {/* Renderiza o formulário de configurações da conta ou a tela principal de configurações */}
-      {showAccountSettingsForm ? renderAccountSettingsForm() : renderMainSettings()}
       
       {/* Dialog de confirmação para redefinir dados */}
       <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
