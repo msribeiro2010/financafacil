@@ -76,7 +76,7 @@ export function AccountSetup({ userId, onEdit }: AccountSetupProps) {
             <div className="flex items-center">
               <WalletCards className="text-primary mr-2 h-5 w-5" />
               <span className="text-xl font-medium">
-                {formatCurrency(parseFloat(user?.initialBalance || '0'))}
+                {formatCurrency(parseFloat(user?.initialBalance || user?.initial_balance || '0'))}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -88,11 +88,11 @@ export function AccountSetup({ userId, onEdit }: AccountSetupProps) {
             <div className="flex items-center">
               <Landmark className="text-secondary mr-2 h-5 w-5" />
               <span className="text-xl font-medium">
-                {formatCurrency(parseFloat(user?.overdraftLimit || '0'))}
+                {formatCurrency(parseFloat(user?.overdraftLimit || user?.overdraft_limit || '0'))}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              {parseFloat(user?.overdraftLimit || '0') > 0 ? 'Disponível' : 'Não configurado'}
+              {parseFloat(user?.overdraftLimit || user?.overdraft_limit || '0') > 0 ? 'Disponível' : 'Não configurado'}
             </p>
           </div>
         </div>
