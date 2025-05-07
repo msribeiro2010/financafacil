@@ -512,9 +512,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[PATCH /api/user/:id/settings] Enviando usuário normalizado:`, normalizedUser);
       
+      // Buscar o resumo financeiro atualizado
+      const financialSummary = await storage.getTransactionSummary(userId);
+      console.log(`[PATCH /api/user/:id/settings] Resumo financeiro calculado:`, financialSummary);
+      
       res.json({
         message: "Configurações atualizadas com sucesso",
-        user: normalizedUser
+        user: normalizedUser,
+        summary: financialSummary
       });
     } catch (error) {
       console.error(`[PATCH /api/user/:id/settings] Erro:`, error);

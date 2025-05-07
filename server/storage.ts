@@ -255,22 +255,31 @@ export class DatabaseStorage implements IStorage {
     const { dbWithExtensions } = await import('./db');
     const transactions = await dbWithExtensions.getTransactions(userId);
     
-    // Parse numeric values - resolvendo o problema de precedência com o operador ||
-    const initialBalanceStr = user.initialBalance || user.initial_balance || '0';
-    const overdraftLimitStr = user.overdraftLimit || user.overdraft_limit || '0';
+    // Buscando dados do usuário diretamente do banco para garantir valores atualizados
+    const { pool } = await import('./db');
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     
-    console.log('DEBUG [getTransactionSummary] Valores encontrados:', {
-      initialBalanceRaw: user.initialBalance,
-      initial_balanceRaw: user.initial_balance,
-      initialBalanceStr,
-      overdraftLimitRaw: user.overdraftLimit,
-      overdraft_limitRaw: user.overdraft_limit,
-      overdraftLimitStr
+    if (userResult.rows.length === 0) {
+      throw new Error("Usuário não encontrado no banco de dados");
+    }
+    
+    // Usando dados diretamente do banco
+    const userFromDb = userResult.rows[0];
+    
+    // Parse numeric values - extraindo valores do banco de dados
+    const initialBalanceStr = userFromDb.initial_balance || '0';
+    const overdraftLimitStr = userFromDb.overdraft_limit || '0';
+    
+    console.log('DEBUG [getTransactionSummary] Valores encontrados direto do banco:', {
+      userId,
+      initialBalanceFromDb: userFromDb.initial_balance,
+      overdraftLimitFromDb: userFromDb.overdraft_limit,
+      allUserProps: Object.keys(userFromDb)
     });
     
     // Convertendo para números
     const initialBalance = parseFloat(initialBalanceStr);
-    const overdraftLimit = parseFloat(overdraftLimitStr); // Garante que o limite nunca é NaN
+    const overdraftLimit = parseFloat(overdraftLimitStr);
     
     console.log('DEBUG [getTransactionSummary] Valores convertidos:', {
       initialBalance,
@@ -291,6 +300,13 @@ export class DatabaseStorage implements IStorage {
     
     // Calcula o saldo atual considerando o saldo inicial + receitas - despesas
     const currentBalance = initialBalance + totalIncome - totalExpenses;
+    
+    console.log('DEBUG [getTransactionSummary] Cálculo do saldo atual:', {
+      initialBalance,
+      totalIncome,
+      totalExpenses,
+      currentBalance
+    });
     // Se o saldo for negativo mas estiver dentro do limite do cheque especial,
     // o sistema ainda permite o gasto, usando o cheque especial como um buffer
     
