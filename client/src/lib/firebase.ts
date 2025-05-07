@@ -1,11 +1,12 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, FirebaseApp } from "firebase/app";
 import { 
   getAuth, 
   signInWithPopup, 
   GoogleAuthProvider, 
   onAuthStateChanged,
   signOut as firebaseSignOut,
-  User as FirebaseUser
+  User as FirebaseUser,
+  Auth
 } from "firebase/auth";
 // Note: Não estamos importando getAnalytics para evitar erros em ambientes de desenvolvimento
 
@@ -14,31 +15,60 @@ console.log("Firebase API Key:", import.meta.env.VITE_FIREBASE_API_KEY ? "Defini
 console.log("Firebase Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID ? "Definido" : "Não definido");
 console.log("Firebase App ID:", import.meta.env.VITE_FIREBASE_APP_ID ? "Definido" : "Não definido");
 
-// Configuração do Firebase com valores hard-coded
-const firebaseConfig = {
-  apiKey: "AIzaSyAGzBW3nzF83WoLFrU3FqAu6Rw_htJFd8U",
-  authDomain: "dados-financ.firebaseapp.com",
-  projectId: "dados-financ",
-  storageBucket: "dados-financ.appspot.com",
-  messagingSenderId: "262830477373",
-  appId: "1:262830477373:web:6655ed1f2eb72159ab1a54",
-  measurementId: "G-P9TWWN09N9"
-};
+// Inicialização segura e resiliente do Firebase
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
 
-// Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+try {
+  // Tentar usar as variáveis de ambiente primeiro
+  if (import.meta.env.VITE_FIREBASE_API_KEY && 
+      import.meta.env.VITE_FIREBASE_PROJECT_ID && 
+      import.meta.env.VITE_FIREBASE_APP_ID) {
+    
+    const envConfig = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
+      messagingSenderId: "",
+      appId: import.meta.env.VITE_FIREBASE_APP_ID
+    };
+    
+    app = initializeApp(envConfig);
+    console.log("Firebase inicializado com variáveis de ambiente");
+  } 
+  else {
+    console.log("Firebase desativado devido à falta de configuração");
+  }
+  
+  if (app) {
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+  }
+} catch (error) {
+  console.error("Erro ao inicializar Firebase", error);
+  // Tratamento gracioso para falha na inicialização
+  app = null;
+  auth = null;
+  googleProvider = null;
+}
 
 // Função para fazer login com Google
 export const signInWithGoogle = async () => {
+  if (!auth || !googleProvider) {
+    console.error("Firebase não está configurado. Impossível fazer login com Google.");
+    throw new Error("Firebase não está configurado. Entre em contato com o suporte.");
+  }
+
   try {
-    // Adiciona escopo ao provedor do Google
-    googleProvider.addScope('email');
-    googleProvider.addScope('profile');
+    // Como já verificamos que googleProvider não é null acima, podemos usar ! para indicar ao TypeScript
+    googleProvider!.addScope('email');
+    googleProvider!.addScope('profile');
     
     console.log("Iniciando login com Google...");
-    const result = await signInWithPopup(auth, googleProvider);
+    // Como já verificamos que auth não é null acima, podemos usar ! para indicar ao TypeScript
+    const result = await signInWithPopup(auth!, googleProvider!);
     console.log("Login com Google bem-sucedido:", result.user);
     return result.user;
   } catch (error: any) {
@@ -61,8 +91,14 @@ export const signInWithGoogle = async () => {
 
 // Função para fazer logout
 export const signOut = async () => {
+  if (!auth) {
+    console.warn("Firebase não está configurado. Não é necessário fazer logout.");
+    return;
+  }
+
   try {
-    await firebaseSignOut(auth);
+    // Como já verificamos que auth não é null acima, podemos usar ! para indicar ao TypeScript
+    await firebaseSignOut(auth!);
   } catch (error) {
     console.error("Erro ao fazer logout:", error);
     throw error;
@@ -71,7 +107,19 @@ export const signOut = async () => {
 
 // Escutar mudanças no estado de autenticação
 export const onAuthChanged = (callback: (user: FirebaseUser | null) => void) => {
-  return onAuthStateChanged(auth, callback);
+  if (!auth) {
+    console.warn("Firebase não está configurado. Nenhuma mudança de estado de autenticação será detectada.");
+    // Retorna uma função noop para manter a interface consistente
+    return () => {};
+  }
+  
+  // Como já verificamos que auth não é null acima, podemos usar ! para indicar ao TypeScript
+  return onAuthStateChanged(auth!, callback);
+};
+
+// Função para verificar se o Firebase está disponível
+export const isFirebaseAvailable = () => {
+  return !!app && !!auth;
 };
 
 export { auth };
