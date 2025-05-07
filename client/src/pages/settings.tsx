@@ -3,12 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Save, Upload, Download, Trash2, X } from 'lucide-react';
+import { AlertCircle, Upload, Download, Trash2, ArrowLeft, Save } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
-import AccountSettingsModal from '@/components/modals/AccountSettingsModal';
 import { apiRequest } from '@/lib/queryClient';
 import { 
   AlertDialog,
@@ -31,7 +30,7 @@ interface SettingsProps {
 export default function Settings({ userId, user: initialUser, onUserUpdate }: SettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [accountSettingsModalOpen, setAccountSettingsModalOpen] = useState(false);
+  const [showAccountSettingsForm, setShowAccountSettingsForm] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   
   // Efeito para forçar uma atualização dos dados do usuário ao carregar a página
@@ -69,11 +68,11 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
   });
   
   const handleEditAccountSettings = () => {
-    // Força uma atualização dos dados do usuário antes de abrir o modal
+    // Força uma atualização dos dados do usuário antes de mostrar o formulário
     // para garantir que os valores exibidos são os mais recentes
     queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
     queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-    setAccountSettingsModalOpen(true);
+    setShowAccountSettingsForm(true);
   };
   
   const handleExportData = () => {
@@ -218,8 +217,128 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
     }
   };
 
-  return (
-    <>
+  // Função para renderizar o formulário de configurações da conta
+  const renderAccountSettingsForm = () => {
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Editar Configurações</CardTitle>
+              <CardDescription>
+                Atualize seus valores iniciais e limites
+              </CardDescription>
+            </div>
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowAccountSettingsForm(false)}
+              className="h-8 w-8 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const initialBalance = formData.get('initialBalance')?.toString() || '0.00';
+            const overdraftLimit = formData.get('overdraftLimit')?.toString() || '0.00';
+            
+            try {
+              console.log('Enviando requisição para atualizar configurações:', { initialBalance, overdraftLimit });
+              // Envia requisição para a API
+              const response = await apiRequest('PATCH', `/api/user/${userId}/settings`, {
+                initialBalance,
+                overdraftLimit
+              });
+              
+              console.log('Resposta da API:', response.status, response.ok);
+              
+              if (response.ok) {
+                // Atualiza os dados localmente
+                queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
+                queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
+                
+                // Atualiza os dados do usuário
+                const updatedUser = await onUserUpdate(userId);
+                console.log('Dados do usuário atualizados:', updatedUser);
+                
+                toast({
+                  title: "Dados atualizados",
+                  description: "As configurações da conta foram atualizadas com sucesso."
+                });
+                
+                // Volta para a tela principal
+                setShowAccountSettingsForm(false);
+              } else {
+                throw new Error("Falha ao atualizar configurações");
+              }
+            } catch (error) {
+              console.error("Erro ao atualizar configurações:", error);
+              toast({
+                title: "Erro",
+                description: "Ocorreu um erro ao atualizar as configurações.",
+                variant: "destructive"
+              });
+            }
+          }}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="initialBalance" className="block text-sm font-medium text-gray-700">
+                  Saldo Inicial (R$)
+                </label>
+                <input
+                  type="text"
+                  id="initialBalance"
+                  name="initialBalance"
+                  defaultValue={parseFloat(user?.initialBalance || user?.initial_balance || '0').toFixed(2).replace('.', ',')}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full"
+                />
+                <p className="text-xs text-gray-500">
+                  Este valor será considerado como seu ponto de partida para cálculos.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="overdraftLimit" className="block text-sm font-medium text-gray-700">
+                  Limite de Cheque Especial (R$)
+                </label>
+                <input
+                  type="text"
+                  id="overdraftLimit"
+                  name="overdraftLimit"
+                  defaultValue={parseFloat(user?.overdraftLimit || user?.overdraft_limit || '0').toFixed(2).replace('.', ',')}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full"
+                />
+                <p className="text-xs text-gray-500">
+                  Defina o valor disponível como limite de cheque especial.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAccountSettingsForm(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex items-center">
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Função para renderizar a tela principal de configurações
+  const renderMainSettings = () => {
+    return (
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Configurações</CardTitle>
@@ -361,113 +480,15 @@ export default function Settings({ userId, user: initialUser, onUserUpdate }: Se
           </div>
         </CardContent>
       </Card>
+    );
+  };
+  
+  return (
+    <>
+      {/* Renderiza o formulário de configurações da conta ou a tela principal de configurações */}
+      {showAccountSettingsForm ? renderAccountSettingsForm() : renderMainSettings()}
       
-      {/* Modals */}
-      {/* Modal de configurações da conta - implementação simplificada */}
-      {accountSettingsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Configurações da Conta</h2>
-              <button 
-                onClick={() => setAccountSettingsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const initialBalance = formData.get('initialBalance')?.toString() || '0.00';
-              const overdraftLimit = formData.get('overdraftLimit')?.toString() || '0.00';
-              
-              try {
-                // Envia requisição para a API
-                const response = await apiRequest('PATCH', `/api/user/${userId}/settings`, {
-                  initialBalance,
-                  overdraftLimit
-                });
-                
-                if (response.ok) {
-                  // Atualiza os dados localmente
-                  queryClient.invalidateQueries({queryKey: [`/api/user/${userId}`]});
-                  queryClient.invalidateQueries({queryKey: [`/api/summary/${userId}`]});
-                  
-                  // Atualiza os dados do usuário
-                  const updatedUser = await onUserUpdate(userId);
-                  
-                  toast({
-                    title: "Dados atualizados",
-                    description: "As configurações da conta foram atualizadas com sucesso."
-                  });
-                  
-                  // Fecha o modal
-                  setAccountSettingsModalOpen(false);
-                } else {
-                  throw new Error("Falha ao atualizar configurações");
-                }
-              } catch (error) {
-                console.error("Erro ao atualizar configurações:", error);
-                toast({
-                  title: "Erro",
-                  description: "Ocorreu um erro ao atualizar as configurações.",
-                  variant: "destructive"
-                });
-              }
-            }}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="initialBalance" className="block text-sm font-medium text-gray-700">
-                    Saldo Inicial (R$)
-                  </label>
-                  <input
-                    type="text"
-                    id="initialBalance"
-                    name="initialBalance"
-                    defaultValue={parseFloat(user?.initialBalance || user?.initial_balance || '0').toFixed(2).replace('.', ',')}
-                    className="px-3 py-2 border border-gray-300 rounded-md w-full"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Este valor será considerado como seu ponto de partida para cálculos.
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="overdraftLimit" className="block text-sm font-medium text-gray-700">
-                    Limite de Cheque Especial (R$)
-                  </label>
-                  <input
-                    type="text"
-                    id="overdraftLimit"
-                    name="overdraftLimit"
-                    defaultValue={parseFloat(user?.overdraftLimit || user?.overdraft_limit || '0').toFixed(2).replace('.', ',')}
-                    className="px-3 py-2 border border-gray-300 rounded-md w-full"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Defina o valor disponível como limite de cheque especial.
-                  </p>
-                </div>
-                
-                <div className="flex justify-end space-x-3 pt-4">
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => setAccountSettingsModalOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit">
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      
+      {/* Dialog de confirmação para redefinir dados */}
       <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
