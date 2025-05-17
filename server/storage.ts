@@ -173,8 +173,29 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const [newTransaction] = await db.insert(transactions).values(transaction).returning();
-    return newTransaction;
+    try {
+      console.log(`[DEBUG] Criando transação:`, transaction);
+      const { pool } = await import('./db');
+      const result = await pool.query(
+        'INSERT INTO transactions (user_id, description, amount, type, category_id, date, recurring_id, attachment_path, is_recurring) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [
+          transaction.userId, 
+          transaction.description, 
+          transaction.amount, 
+          transaction.type,
+          transaction.categoryId,
+          transaction.date,
+          transaction.recurringId || null,
+          transaction.attachmentPath || null,
+          transaction.isRecurring || false
+        ]
+      );
+      console.log(`[DEBUG] Transação criada com sucesso:`, result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`[ERRO] Falha ao criar transação:`, error);
+      throw error;
+    }
   }
   
   async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
@@ -220,12 +241,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getRecurringTransactionById(id: number): Promise<RecurringTransaction | undefined> {
-    const [transaction] = await db
-      .select()
-      .from(recurringTransactions)
-      .where(eq(recurringTransactions.id, id));
-    
-    return transaction;
+    try {
+      console.log(`[DEBUG] Buscando transação recorrente com ID ${id}`);
+      const { pool } = await import('./db');
+      const result = await pool.query('SELECT * FROM recurring_transactions WHERE id = $1', [id]);
+      console.log(`[DEBUG] Transação recorrente encontrada:`, result.rows.length > 0 ? 'Sim' : 'Não');
+      return result.rows.length > 0 ? result.rows[0] : undefined;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar transação recorrente ${id}:`, error);
+      return undefined;
+    }
   }
   
   async createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction> {
