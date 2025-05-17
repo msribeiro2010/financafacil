@@ -26,7 +26,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
   const [file, setFile] = useState<File | null>(null);
   const [showRecurring, setShowRecurring] = useState(false);
   const isEditMode = !!transaction;
-  
+
   // Get categories
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['/api/categories?type=income'],
@@ -38,7 +38,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
       console.error('Erro ao carregar categorias de receita:', error);
     }
   });
-  
+
   // Form schema
   const formSchema = z.object({
     description: z.string().min(1, { message: 'Descrição é obrigatória' }),
@@ -50,7 +50,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
     startDate: z.string().optional(),
     endDate: z.string().optional(),
   });
-  
+
   // Form initialization
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,7 +65,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
       endDate: '',
     },
   });
-  
+
   // Update form when transaction changes
   useEffect(() => {
     if (transaction) {
@@ -76,7 +76,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         categoryId: transaction.categoryId?.toString() || '',
         isRecurring: transaction.isRecurring || false,
       });
-      
+
       setShowRecurring(transaction.isRecurring || false);
     } else {
       form.reset({
@@ -89,16 +89,16 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         startDate: new Date().toISOString().slice(0, 10),
         endDate: '',
       });
-      
+
       setShowRecurring(false);
     }
   }, [transaction, form]);
-  
+
   // Handle file change
   const handleFileChange = (selectedFile: File | null) => {
     setFile(selectedFile);
   };
-  
+
   // Create transaction mutation
   const createTransaction = useMutation({
     mutationFn: async (data: FormData) => {
@@ -123,7 +123,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
       });
     }
   });
-  
+
   // Update transaction mutation
   const updateTransaction = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: FormData }) => {
@@ -148,15 +148,15 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
       });
     }
   });
-  
+
   // Form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const formData = new FormData();
-    
+
     // Add user ID
     formData.append('userId', userId.toString());
     formData.append('type', 'income');
-    
+
     // Add other fields
     Object.entries(values).forEach(([key, value]) => {
       if (key === 'isRecurring') {
@@ -165,12 +165,12 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         formData.append(key, value.toString());
       }
     });
-    
+
     // Add file if exists
     if (file) {
       formData.append('attachment', file);
     }
-    
+
     // Check if it's a recurring transaction
     if (values.isRecurring && !isEditMode) {
       // Prepare recurring transaction data as JSON
@@ -192,17 +192,17 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         frequency: values.frequency || 'monthly',
         startDate: values.startDate || values.date
       };
-      
+
       if (values.endDate) {
         recurringData.endDate = values.endDate;
       }
-      
+
       // Log what we're sending
       console.log("Submitting recurring income data:", recurringData);
-      
+
       // For file uploads, we would need a different approach
       // but for now, let's just submit the JSON data
-      
+
       // Create recurring transaction with JSON data
       apiRequest('POST', '/api/recurring', recurringData)
         .then(async (res) => {
@@ -216,7 +216,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         .then((data) => {
           // Add recurring ID to transaction
           formData.append('recurringId', data.id.toString());
-          
+
           // Create the first occurrence
           if (isEditMode) {
             updateTransaction.mutate({ id: transaction.id, data: formData });
@@ -231,7 +231,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
               date: values.date.toString(), // Ensure date is sent as string
               recurringId: data.id
             };
-            
+
             console.log("Creating first occurrence of recurring income:", transactionData);
             apiRequest('POST', '/api/transactions', transactionData)
               .then(response => {
@@ -276,7 +276,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
       if (formData.has('isRecurring')) {
         formData.set('isRecurring', formData.get('isRecurring') === 'true' ? 'true' : 'false');
       }
-      
+
       if (isEditMode) {
         updateTransaction.mutate({ id: transaction.id, data: formData });
       } else {
@@ -284,7 +284,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
       }
     }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -294,7 +294,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
             Preencha os detalhes da receita abaixo.
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -310,7 +310,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="amount"
@@ -333,7 +333,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -348,7 +348,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="categoryId"
@@ -388,7 +388,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="isRecurring"
@@ -412,7 +412,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                 </FormItem>
               )}
             />
-            
+
             {showRecurring && !isEditMode && (
               <div className="p-4 bg-slate-50 rounded-md space-y-4">
                 <FormField
@@ -442,7 +442,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                     </FormItem>
                   )}
                 />
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
@@ -457,7 +457,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="endDate"
@@ -474,12 +474,12 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                 </div>
               </div>
             )}
-            
+
             <FileUpload
               onFileChange={handleFileChange}
               currentFileName={transaction?.attachment?.split('/').pop()}
             />
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar

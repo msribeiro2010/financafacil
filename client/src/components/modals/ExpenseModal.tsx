@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileUpload } from '@/components/ui/file-upload';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -26,7 +27,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   const [file, setFile] = useState<File | null>(null);
   const [showRecurring, setShowRecurring] = useState(false);
   const isEditMode = !!transaction;
-  
+
   // Get categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<any>({
     queryKey: ['/api/categories?type=expense'],
@@ -38,19 +39,19 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       console.error('Erro ao carregar categorias de despesa:', error);
     }
   });
-  
+
   // Get user data for overdraft limit check
   const { data: userData } = useQuery<any>({
     queryKey: [`/api/user/${userId}`],
     enabled: isOpen,
   });
-  
+
   // Get financial summary for current balance
   const { data: financialSummary } = useQuery<any>({
     queryKey: [`/api/summary/${userId}`],
     enabled: isOpen,
   });
-  
+
   // Form schema
   const formSchema = z.object({
     description: z.string().min(1, { message: 'Descrição é obrigatória' }),
@@ -62,7 +63,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
     startDate: z.string().optional(),
     endDate: z.string().optional(),
   });
-  
+
   // Form initialization
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,7 +78,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       endDate: '',
     },
   });
-  
+
   // Update form when transaction changes
   useEffect(() => {
     if (transaction) {
@@ -88,7 +89,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         categoryId: transaction.categoryId?.toString() || '',
         isRecurring: transaction.isRecurring || false,
       });
-      
+
       setShowRecurring(transaction.isRecurring || false);
     } else {
       form.reset({
@@ -101,16 +102,16 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         startDate: new Date().toISOString().slice(0, 10),
         endDate: '',
       });
-      
+
       setShowRecurring(false);
     }
   }, [transaction, form]);
-  
+
   // Handle file change
   const handleFileChange = (selectedFile: File | null) => {
     setFile(selectedFile);
   };
-  
+
   // Create transaction mutation
   const createTransaction = useMutation({
     mutationFn: async (data: FormData) => {
@@ -136,7 +137,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       });
     }
   });
-  
+
   // Update transaction mutation
   const updateTransaction = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: FormData }) => {
@@ -162,7 +163,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       });
     }
   });
-  
+
   // Form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Verificar se a despesa não ultrapassa o saldo + limite de cheque especial
@@ -171,11 +172,11 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       const currentBalance = financialSummary.currentBalance;
       const overdraftLimit = parseFloat(userData.overdraftLimit || '0');
       const availableTotal = currentBalance + overdraftLimit;
-      
+
       // Se for edição de uma despesa existente, considerar o valor anterior
       const previousAmount = isEditMode ? parseFloat(transaction.amount) : 0;
       const netExpense = expenseAmount - previousAmount;
-      
+
       // Se o total disponível menos a nova despesa for negativo, mostrar alerta
       if (availableTotal - netExpense < 0) {
         const result = window.confirm(
@@ -186,25 +187,25 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
           `Valor da despesa: R$ ${expenseAmount.toFixed(2)}\n\n` +
           `Deseja continuar mesmo assim?`
         );
-        
+
         if (!result) {
           return; // Usuário cancelou a operação
         }
       }
-      
+
       // Se o saldo vai ficar negativo mas dentro do limite do cheque especial, mostrar alerta informativo
       else if (currentBalance - netExpense < 0) {
         // Usar uma abordagem mais simples com alert em vez do toast warning para evitar problemas de tipagem
         alert('⚠️ Atenção: Esta despesa irá utilizar seu limite de cheque especial.');
       }
     }
-    
+
     const formData = new FormData();
-    
+
     // Add user ID
     formData.append('userId', userId.toString());
     formData.append('type', 'expense');
-    
+
     // Add other fields
     Object.entries(values).forEach(([key, value]) => {
       if (key === 'isRecurring') {
@@ -213,12 +214,12 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         formData.append(key, value.toString());
       }
     });
-    
+
     // Add file if exists
     if (file) {
       formData.append('attachment', file);
     }
-    
+
     // Check if it's a recurring transaction
     if (values.isRecurring && !isEditMode) {
       // Prepare recurring transaction data as JSON
@@ -240,17 +241,17 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         frequency: values.frequency || 'monthly',
         startDate: values.startDate || values.date
       };
-      
+
       if (values.endDate) {
         recurringData.endDate = values.endDate;
       }
-      
+
       // Log what we're sending
       console.log("Submitting recurring expense data:", recurringData);
-      
+
       // For file uploads, we would need a different approach
       // but for now, let's just submit the JSON data
-      
+
       // Create recurring transaction with JSON data
       apiRequest('POST', '/api/recurring', recurringData)
         .then(async (res) => {
@@ -264,7 +265,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         .then((data) => {
           // Add recurring ID to transaction
           formData.append('recurringId', data.id.toString());
-          
+
           // Create the first occurrence
           if (isEditMode) {
             updateTransaction.mutate({ id: transaction.id, data: formData });
@@ -279,7 +280,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
               date: values.date.toString(), // Ensure date is sent as string
               recurringId: data.id
             };
-            
+
             console.log("Creating first occurrence of recurring expense:", transactionData);
             apiRequest('POST', '/api/transactions', transactionData)
               .then(response => {
@@ -324,7 +325,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       if (formData.has('isRecurring')) {
         formData.set('isRecurring', formData.get('isRecurring') === 'true' ? 'true' : 'false');
       }
-      
+
       if (isEditMode) {
         updateTransaction.mutate({ id: transaction.id, data: formData });
       } else {
@@ -332,7 +333,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
       }
     }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -342,7 +343,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
             Preencha os detalhes da despesa abaixo.
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -358,7 +359,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="amount"
@@ -381,7 +382,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -396,7 +397,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="categoryId"
@@ -436,7 +437,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="isRecurring"
@@ -460,7 +461,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                 </FormItem>
               )}
             />
-            
+
             {showRecurring && !isEditMode && (
               <div className="p-4 bg-slate-50 rounded-md space-y-4">
                 <FormField
@@ -490,7 +491,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                     </FormItem>
                   )}
                 />
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
@@ -505,7 +506,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="endDate"
@@ -522,12 +523,12 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                 </div>
               </div>
             )}
-            
+
             <FileUpload
               onFileChange={handleFileChange}
               currentFileName={transaction?.attachment?.split('/').pop()}
             />
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
