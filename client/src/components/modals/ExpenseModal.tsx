@@ -12,7 +12,7 @@ import { z } from "zod";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 import { Loader2 } from 'lucide-react';
 
 interface ExpenseModalProps {
