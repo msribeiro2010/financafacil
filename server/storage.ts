@@ -376,15 +376,13 @@ export class DatabaseStorage implements IStorage {
     
     const today = new Date();
     
-    // Processa transações recorrentes
+    // Processa transações recorrentes anteriores ou atuais
     recurringTransactions.forEach(transaction => {
       const startDate = new Date(transaction.startDate || transaction.start_date);
       
-      // Para o saldo atual, consideramos apenas transações já realizadas
-      // Uma transação recorrente só é realizada na data específica, não antes
-      if (startDate.getDate() <= today.getDate() && 
-          startDate.getMonth() <= today.getMonth() && 
-          startDate.getFullYear() <= today.getFullYear()) {
+      // Se a data de início da transação recorrente for igual ou anterior à hoje,
+      // contabiliza a transação no saldo atual
+      if (startDate <= today) {
         const amount = parseFloat(transaction.amount as string);
         if (transaction.type === "income") {
           additionalIncome += amount;
