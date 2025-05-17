@@ -109,20 +109,48 @@ export class DatabaseStorage implements IStorage {
   
   // Category methods
   async getCategories(type?: string): Promise<Category[]> {
-    if (type) {
-      return db.select().from(categories).where(eq(categories.type, type));
+    try {
+      // Usar pool para consulta SQL direta para evitar problemas com o driver
+      const { pool } = await import('./db');
+      let query = 'SELECT * FROM categories';
+      const params: any[] = [];
+      
+      if (type) {
+        query += ' WHERE type = $1';
+        params.push(type);
+      }
+      
+      const result = await pool.query(query, params);
+      return result.rows;
+    } catch (error) {
+      console.error('[ERROR] Falha ao buscar categorias:', error);
+      return [];
     }
-    return db.select().from(categories);
   }
   
   async getCategoryById(id: number): Promise<Category | undefined> {
-    const [category] = await db.select().from(categories).where(eq(categories.id, id));
-    return category;
+    try {
+      const { pool } = await import('./db');
+      const result = await pool.query('SELECT * FROM categories WHERE id = $1', [id]);
+      return result.rows.length > 0 ? result.rows[0] : undefined;
+    } catch (error) {
+      console.error(`[ERROR] Falha ao buscar categoria ${id}:`, error);
+      return undefined;
+    }
   }
   
   async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db.insert(categories).values(category).returning();
-    return newCategory;
+    try {
+      const { pool } = await import('./db');
+      const result = await pool.query(
+        'INSERT INTO categories (name, type, icon) VALUES ($1, $2, $3) RETURNING *',
+        [category.name, category.type, category.icon || 'ri-question-line']
+      );
+      return result.rows[0];
+    } catch (error) {
+      console.error(`[ERROR] Falha ao criar categoria:`, error);
+      throw error;
+    }
   }
   
   // Transaction methods
