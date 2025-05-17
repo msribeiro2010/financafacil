@@ -31,6 +31,12 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   const { data: categories, isLoading: categoriesLoading } = useQuery<any>({
     queryKey: ['/api/categories?type=expense'],
     enabled: isOpen,
+    onSuccess: (data) => {
+      console.log('Categorias de despesa carregadas:', data);
+    },
+    onError: (error) => {
+      console.error('Erro ao carregar categorias de despesa:', error);
+    }
   });
   
   // Get user data for overdraft limit check
@@ -230,7 +236,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         type: 'expense',
         description: values.description,
         amount: values.amount,
-        categoryId: parseInt(values.categoryId),
+        categoryId: parseInt(values.categoryId, 10),
         frequency: values.frequency || 'monthly',
         startDate: values.startDate || values.date
       };
@@ -407,12 +413,16 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                           <SelectItem value="loading" disabled>
                             Carregando...
                           </SelectItem>
-                        ) : (
-                          categories?.map((category: any) => (
+                        ) : categories && categories.length > 0 ? (
+                          categories.map((category: any) => (
                             <SelectItem key={category.id} value={category.id.toString()}>
                               {category.name}
                             </SelectItem>
                           ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>
+                            Nenhuma categoria encontrada
+                          </SelectItem>
                         )}
                       </SelectContent>
                     </Select>

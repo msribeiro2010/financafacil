@@ -31,6 +31,12 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['/api/categories?type=income'],
     enabled: isOpen,
+    onSuccess: (data) => {
+      console.log('Categorias de receita carregadas:', data);
+    },
+    onError: (error) => {
+      console.error('Erro ao carregar categorias de receita:', error);
+    }
   });
   
   // Form schema
@@ -182,7 +188,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         type: 'income',
         description: values.description,
         amount: values.amount,
-        categoryId: parseInt(values.categoryId),
+        categoryId: parseInt(values.categoryId, 10),
         frequency: values.frequency || 'monthly',
         startDate: values.startDate || values.date
       };
@@ -359,12 +365,16 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
                           <SelectItem value="loading" disabled>
                             Carregando...
                           </SelectItem>
-                        ) : (
-                          categories?.map((category: any) => (
+                        ) : categories && categories.length > 0 ? (
+                          categories.map((category: any) => (
                             <SelectItem key={category.id} value={category.id.toString()}>
                               {category.name}
                             </SelectItem>
                           ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>
+                            Nenhuma categoria encontrada
+                          </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
