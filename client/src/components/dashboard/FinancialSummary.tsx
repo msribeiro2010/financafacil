@@ -190,6 +190,39 @@ export default function FinancialSummary({ userId }: FinancialSummaryProps) {
             <p className="text-2xl font-bold text-slate-800">
               {formatCurrency(summary?.currentBalance || 0)}
             </p>
+            
+            {/* Indicador do Cheque Especial */}
+            {user?.overdraftLimit && parseFloat(user?.overdraftLimit) > 0 && summary?.currentBalance < 0 && (
+              <div className="mt-2 border-t pt-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-medium text-slate-500">Cheque Especial:</span>
+                  <span className="text-xs font-medium text-slate-600">
+                    {formatCurrency(parseFloat(user?.overdraftLimit || '0'))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-slate-500">Em uso:</span>
+                  <span className="text-xs text-destructive font-medium">
+                    {formatCurrency(Math.abs(summary?.currentBalance || 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-slate-500">Disponível:</span>
+                  <span className="text-xs text-accent font-medium">
+                    {formatCurrency(parseFloat(user?.overdraftLimit || '0') - Math.abs(summary?.currentBalance || 0))}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1.5">
+                  <div 
+                    className="bg-destructive h-1.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.min(Math.round((Math.abs(summary?.currentBalance || 0) / parseFloat(user?.overdraftLimit || '1')) * 100), 100)}%` 
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            
             <div className="mt-2 flex justify-between items-center">
               <div className="flex items-center text-xs">
                 <span className="text-accent flex items-center">
