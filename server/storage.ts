@@ -16,26 +16,26 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserSettings(userId: number, initialBalance: string, overdraftLimit: string): Promise<User>;
-  
+
   // Category methods
   getCategories(type?: string): Promise<Category[]>;
   getCategoryById(id: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
-  
+
   // Transaction methods
   getTransactions(userId: number, limit?: number): Promise<Transaction[]>;
   getTransactionById(id: number): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction>;
   deleteTransaction(id: number): Promise<boolean>;
-  
+
   // Recurring transaction methods
   getRecurringTransactions(userId: number): Promise<RecurringTransaction[]>;
   getRecurringTransactionById(id: number): Promise<RecurringTransaction | undefined>;
   createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction>;
   updateRecurringTransaction(id: number, transaction: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction>;
   deleteRecurringTransaction(id: number): Promise<boolean>;
-  
+
   // Summary and reporting
   getTransactionSummary(userId: number): Promise<TransactionSummary>;
   getCategorySummary(userId: number, type: string): Promise<CategorySummary[]>;
@@ -51,7 +51,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`[DEBUG] Usuário encontrado:`, user ? 'Sim' : 'Não');
     return user;
   }
-  
+
   async getUserByUsername(username: string): Promise<User | undefined> {
     console.log(`[DEBUG] Buscando usuário com username: ${username}`);
     // Importante: await é necessário aqui porque getUserByUsername retorna uma Promise
@@ -59,24 +59,24 @@ export class DatabaseStorage implements IStorage {
     console.log(`[DEBUG] Usuário encontrado:`, user ? 'Sim' : 'Não');
     return user;
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     if (!email) return undefined;
-    
+
     const [user] = await db
       .select()
       .from(users)
       .where(eq(users.email, email));
-      
+
     return user;
   }
-  
+
   async createUser(user: InsertUser): Promise<User> {
     console.log(`[DEBUG] Criando novo usuário:`, user.username);
     // Importante: adicionar await aqui também
     const newUser = await db.createUser(user);
     console.log(`[DEBUG] Novo usuário criado com ID:`, newUser.id);
-    
+
     // Se for o primeiro usuário, inicialize o banco de dados
     try {
       const userCount = await db.select('SELECT COUNT(*) as count FROM users') as any[];
@@ -89,24 +89,24 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('[ERRO] Erro ao verificar quantidade de usuários:', error);
     }
-    
+
     return newUser;
   }
-  
+
   async updateUserSettings(userId: number, initialBalance: string, overdraftLimit: string): Promise<User> {
     const [updatedUser] = await db
       .update(users)
       .set({ initialBalance, overdraftLimit })
       .where(eq(users.id, userId))
       .returning();
-    
+
     if (!updatedUser) {
       throw new Error("User not found");
     }
-    
+
     return updatedUser;
   }
-  
+
   // Category methods
   async getCategories(type?: string): Promise<Category[]> {
     try {
@@ -114,12 +114,12 @@ export class DatabaseStorage implements IStorage {
       const { pool } = await import('./db');
       let query = 'SELECT * FROM categories';
       const params: any[] = [];
-      
+
       if (type) {
         query += ' WHERE type = $1';
         params.push(type);
       }
-      
+
       const result = await pool.query(query, params);
       return result.rows;
     } catch (error) {
@@ -127,7 +127,7 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
-  
+
   async getCategoryById(id: number): Promise<Category | undefined> {
     try {
       const { pool } = await import('./db');
@@ -138,7 +138,7 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
   }
-  
+
   async createCategory(category: InsertCategory): Promise<Category> {
     try {
       const { pool } = await import('./db');
@@ -152,26 +152,26 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   // Transaction methods
   async getTransactions(userId: number, limit?: number): Promise<Transaction[]> {
     let queryResult = await db.select()
       .from(transactions)
       .where(eq(transactions.userId, userId))
       .orderBy(desc(transactions.date));
-    
+
     if (limit) {
       return queryResult.slice(0, limit);
     }
-    
+
     return queryResult;
   }
-  
+
   async getTransactionById(id: number): Promise<Transaction | undefined> {
     const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
     return transaction;
   }
-  
+
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     try {
       console.log(`[DEBUG] Criando transação:`, transaction);
@@ -197,36 +197,36 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
     const [updatedTransaction] = await db
       .update(transactions)
       .set(transaction)
       .where(eq(transactions.id, id))
       .returning();
-    
+
     if (!updatedTransaction) {
       throw new Error("Transaction not found");
     }
-    
+
     return updatedTransaction;
   }
-  
+
   async deleteTransaction(id: number): Promise<boolean> {
     try {
       // Para SQLite, precisamos modificar a abordagem
       // Primeiro buscamos a transação para verificar se existe
       const transaction = await this.getTransactionById(id);
-      
+
       if (!transaction) {
         return false;
       }
-      
+
       // Executamos a exclusão sem tentar retornar dados
       db.delete(transactions)
         .where(eq(transactions.id, id))
         .run();
-      
+
       // Em SQLite, assumimos que a exclusão foi bem-sucedida se o registro existia
       return true;
     } catch (error) {
@@ -234,12 +234,12 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   // Recurring transaction methods
   async getRecurringTransactions(userId: number): Promise<RecurringTransaction[]> {
     return db.getRecurringTransactions(userId);
   }
-  
+
   async getRecurringTransactionById(id: number): Promise<RecurringTransaction | undefined> {
     try {
       console.log(`[DEBUG] Buscando transação recorrente com ID ${id}`);
@@ -252,7 +252,7 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
   }
-  
+
   async createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction> {
     try {
       console.log(`[DEBUG] Criando transação recorrente:`, transaction);
@@ -277,32 +277,32 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   async updateRecurringTransaction(id: number, transaction: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction> {
     const [updatedTransaction] = await db
       .update(recurringTransactions)
       .set(transaction)
       .where(eq(recurringTransactions.id, id))
       .returning();
-    
+
     if (!updatedTransaction) {
       throw new Error("Recurring transaction not found");
     }
-    
+
     return updatedTransaction;
   }
-  
+
   async deleteRecurringTransaction(id: number): Promise<boolean> {
     try {
       console.log(`[Storage] Solicitada exclusão da transação recorrente ${id}`);
-      
+
       // Primeiro verificamos se a transação existe
       const transaction = await this.getRecurringTransactionById(id);
       if (!transaction) {
         console.log(`[Storage] Transação ${id} não encontrada na pré-verificação`);
         return false;
       }
-      
+
       console.log(`[Storage] Transação ${id} encontrada, chamando dbWithExtensions.deleteRecurringTransaction`);
       const { dbWithExtensions } = await import('./db');
       return await dbWithExtensions.deleteRecurringTransaction(id);
@@ -311,53 +311,53 @@ export class DatabaseStorage implements IStorage {
       return false; // Retornamos false em vez de lançar erro para maior robustez
     }
   }
-  
+
   // Summary and reporting
   async getTransactionSummary(userId: number): Promise<TransactionSummary> {
     const user = await this.getUser(userId);
-    
+
     if (!user) {
       throw new Error("User not found");
     }
-    
+
     // Usar a função do dbWithExtensions em vez do método da classe
     const { dbWithExtensions } = await import('./db');
     const transactions = await dbWithExtensions.getTransactions(userId);
-    
+
     // Buscando dados do usuário diretamente do banco para garantir valores atualizados
     const { pool } = await import('./db');
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    
+
     if (userResult.rows.length === 0) {
       throw new Error("Usuário não encontrado no banco de dados");
     }
-    
+
     // Usando dados diretamente do banco
     const userFromDb = userResult.rows[0];
-    
+
     // Parse numeric values - extraindo valores do banco de dados
     const initialBalanceStr = userFromDb.initial_balance || '0';
     const overdraftLimitStr = userFromDb.overdraft_limit || '0';
-    
+
     console.log('DEBUG [getTransactionSummary] Valores encontrados direto do banco:', {
       userId,
       initialBalanceFromDb: userFromDb.initial_balance,
       overdraftLimitFromDb: userFromDb.overdraft_limit,
       allUserProps: Object.keys(userFromDb)
     });
-    
+
     // Convertendo para números
     const initialBalance = parseFloat(initialBalanceStr);
     const overdraftLimit = parseFloat(overdraftLimitStr);
-    
+
     console.log('DEBUG [getTransactionSummary] Valores convertidos:', {
       initialBalance,
       overdraftLimit
     });
-    
+
     let totalIncome = 0;
     let totalExpenses = 0;
-    
+
     transactions.forEach(transaction => {
       const amount = parseFloat(transaction.amount as string);
       if (transaction.type === "income") {
@@ -366,46 +366,46 @@ export class DatabaseStorage implements IStorage {
         totalExpenses += amount;
       }
     });
-    
+
     // Buscamos também as transações recorrentes
     const recurringTransactions = await dbWithExtensions.getRecurringTransactions(userId);
-    
+
     // Leva em consideração transações recorrentes que já deveriam ter sido processadas
     let additionalIncome = 0;
     let additionalExpenses = 0;
-    
+
     const today = new Date();
-    
+
     // Processa transações recorrentes anteriores ou atuais
-    recurringTransactions.forEach(transaction => {
-      const startDate = new Date(transaction.startDate || transaction.start_date);
-      
-      // Para o saldo atual, considera apenas transações cuja data já passou,
-      // comparando ano, mês e dia para ter certeza
-      if (startDate.getFullYear() < today.getFullYear() || 
-          (startDate.getFullYear() === today.getFullYear() && 
-           startDate.getMonth() < today.getMonth()) || 
-          (startDate.getFullYear() === today.getFullYear() && 
-           startDate.getMonth() === today.getMonth() && 
-           startDate.getDate() <= today.getDate())) {
-        const amount = parseFloat(transaction.amount as string);
-        if (transaction.type === "income") {
-          additionalIncome += amount;
-        } else {
-          additionalExpenses += amount;
-        }
-      }
-    });
-    
+    // recurringTransactions.forEach(transaction => {  // REMOVE recurringTransactions.forEach
+    //   const startDate = new Date(transaction.startDate || transaction.start_date);
+
+    //   // Para o saldo atual, considera apenas transações cuja data já passou,
+    //   // comparando ano, mês e dia para ter certeza
+    //   if (startDate.getFullYear() < today.getFullYear() || 
+    //       (startDate.getFullYear() === today.getFullYear() && 
+    //        startDate.getMonth() < today.getMonth()) || 
+    //       (startDate.getFullYear() === today.getFullYear() && 
+    //        startDate.getMonth() === today.getMonth() && 
+    //        startDate.getDate() <= today.getDate())) {
+    //     const amount = parseFloat(transaction.amount as string);
+    //     if (transaction.type === "income") {
+    //       additionalIncome += amount;
+    //     } else {
+    //       additionalExpenses += amount;
+    //     }
+    //   }
+    // });
+
     console.log('DEBUG [getTransactionSummary] Adicional das recorrentes:', {
       additionalIncome,
       additionalExpenses
     });
-    
+
     // Calcula o saldo atual considerando o saldo inicial + receitas - despesas
     // incluindo transações recorrentes já processadas
-    const currentBalance = initialBalance + totalIncome + additionalIncome - totalExpenses - additionalExpenses;
-    
+    const currentBalance = initialBalance + totalIncome  - totalExpenses ;//+ additionalIncome - additionalExpenses;
+
     console.log('DEBUG [getTransactionSummary] Cálculo do saldo atual:', {
       initialBalance,
       totalIncome,
@@ -416,16 +416,16 @@ export class DatabaseStorage implements IStorage {
     });
     // Se o saldo for negativo mas estiver dentro do limite do cheque especial,
     // o sistema ainda permite o gasto, usando o cheque especial como um buffer
-    
+
     // For projected balance, include upcoming recurring transactions
     let projectedBalance = currentBalance;
-    
+
     // Calculate projected balance using additional future recurring transactions
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    
+
     for (const transaction of recurringTransactions) {
       const startDate = new Date(transaction.startDate || transaction.start_date);
-      
+
       if (transaction.frequency === "monthly" && startDate.getDate() > today.getDate() && startDate.getDate() <= endOfMonth.getDate()) {
         const amount = parseFloat(transaction.amount as string);
         if (transaction.type === "income") {
@@ -435,7 +435,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
-    
+
     return {
       totalIncome,
       totalExpenses,
@@ -443,16 +443,16 @@ export class DatabaseStorage implements IStorage {
       projectedBalance
     };
   }
-  
+
   async getCategorySummary(userId: number, type: string): Promise<CategorySummary[]> {
     // Usar a função do dbWithExtensions em vez do método da classe
     const { dbWithExtensions } = await import('./db');
     const transactionsList = await dbWithExtensions.getTransactions(userId);
     const filteredTransactions = transactionsList.filter(t => t.type === type);
-    
+
     const categorySums = new Map<number, number>();
     let total = 0;
-    
+
     // Calculate sum by category
     for (const transaction of filteredTransactions) {
       // Verifica se temos category_id (banco) ou categoryId (app)
@@ -464,7 +464,7 @@ export class DatabaseStorage implements IStorage {
         total += amount;
       }
     }
-    
+
     // Convert to CategorySummary objects
     const result: CategorySummary[] = [];
     for (const [categoryId, sum] of categorySums.entries()) {
@@ -479,20 +479,20 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
-    
+
     // Sort by total in descending order
     return result.sort((a, b) => b.total - a.total);
   }
-  
+
   async getUpcomingBills(userId: number): Promise<Transaction[]> {
     const today = new Date();
     const thirtyDaysLater = new Date();
     thirtyDaysLater.setDate(today.getDate() + 30);
-    
+
     // Usar a função do dbWithExtensions em vez do método da classe
     const { dbWithExtensions } = await import('./db');
     const allTransactions = await dbWithExtensions.getTransactions(userId);
-    
+
     // Filter for upcoming expense transactions
     return allTransactions
       .filter(transaction => 
@@ -502,7 +502,7 @@ export class DatabaseStorage implements IStorage {
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
-  
+
   // Helper methods for initial setup
   private async initializeDefaultCategories() {
     const incomeCategories = [
@@ -512,7 +512,7 @@ export class DatabaseStorage implements IStorage {
       { name: "Vendas", type: "income", icon: "ri-store-line" },
       { name: "Outras", type: "income", icon: "ri-wallet-line" }
     ];
-    
+
     const expenseCategories = [
       { name: "Moradia", type: "expense", icon: "ri-home-line" },
       { name: "Alimentação", type: "expense", icon: "ri-shopping-cart-line" },
@@ -524,32 +524,32 @@ export class DatabaseStorage implements IStorage {
       { name: "Utilidades", type: "expense", icon: "ri-lightbulb-line" },
       { name: "Outras", type: "expense", icon: "ri-question-line" }
     ];
-    
+
     for (const category of [...incomeCategories, ...expenseCategories]) {
       await this.createCategory(category);
     }
   }
-  
+
   private async addDemoTransactions(userId: number) {
     // Get all categories
     const allCategories = await this.getCategories();
-    
+
     // Find category IDs by name
     const findCategoryId = (name: string, type: string) => {
       const found = allCategories.find(c => c.name === name && c.type === type);
       return found ? found.id : null;
     };
-    
+
     const salaryCategory = findCategoryId("Salário", "income") || 1;
     const housingCategory = findCategoryId("Moradia", "expense") || 6;
     const foodCategory = findCategoryId("Alimentação", "expense") || 7;
     const transportCategory = findCategoryId("Transporte", "expense") || 8;
     const utilitiesCategory = findCategoryId("Utilidades", "expense") || 13;
-    
+
     const today = new Date();
     const thisMonth = today.getMonth();
     const thisYear = today.getFullYear();
-    
+
     // Create some transactions
     const transactions: InsertTransaction[] = [
       {
@@ -607,7 +607,7 @@ export class DatabaseStorage implements IStorage {
         isRecurring: true
       }
     ];
-    
+
     // Add recurring transactions
     const recurringTransactions: InsertRecurringTransaction[] = [
       {
@@ -647,12 +647,12 @@ export class DatabaseStorage implements IStorage {
         startDate: new Date().toISOString()
       }
     ];
-    
+
     // Create transactions
     for (const transaction of transactions) {
       await this.createTransaction(transaction);
     }
-    
+
     // Create recurring transactions
     for (const transaction of recurringTransactions) {
       await this.createRecurringTransaction(transaction);
