@@ -229,6 +229,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
               amount: values.amount,
               categoryId: parseInt(values.categoryId),
               date: values.date.toString(), // Ensure date is sent as string
+              isRecurring: 'true',
               recurringId: data.id
             };
 

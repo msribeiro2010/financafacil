@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
-import { Pencil, Trash2, Plus, Calendar, ArrowUpCircle, ArrowDownCircle, FileText, Eye } from 'lucide-react';
+import { Pencil, Trash2, Plus, Calendar, ArrowUpCircle, ArrowDownCircle, FileText, Eye, ExternalLink } from 'lucide-react';
 import { AttachmentViewerModal } from "@/components/modals/AttachmentViewerModal";
 import ExpenseModal from '@/components/modals/ExpenseModal';
 import IncomeModal from '@/components/modals/IncomeModal';
@@ -37,12 +37,12 @@ export default function Recurring({ userId }: RecurringProps) {
   const [activeTab, setActiveTab] = useState('all');
   const [attachmentViewerOpen, setAttachmentViewerOpen] = useState(false);
   const [selectedAttachmentPath, setSelectedAttachmentPath] = useState('');
-  
+
   // Fetch recurring transactions
   const { data: recurringTransactions, isLoading } = useQuery({
     queryKey: [`/api/recurring/${userId}`],
   });
-  
+
   // Delete recurring transaction mutation
   const deleteRecurring = useMutation({
     mutationFn: async (id: number) => {
@@ -78,27 +78,27 @@ export default function Recurring({ userId }: RecurringProps) {
       setDeleteId(null);
     }
   });
-  
+
   const handleAddExpense = () => {
     setSelectedTransaction(null);
     setExpenseModalOpen(true);
   };
-  
+
   const handleAddIncome = () => {
     setSelectedTransaction(null);
     setIncomeModalOpen(true);
   };
-  
+
   // Filter recurring transactions
   const filteredTransactions = React.useMemo(() => {
     if (!recurringTransactions) return [];
-    
+
     return recurringTransactions.filter((transaction: any) => {
       // Filter by type
       return activeTab === 'all' || transaction.type === activeTab;
     });
   }, [recurringTransactions, activeTab]);
-  
+
   // Get frequency label
   const getFrequencyLabel = (frequency: string) => {
     switch (frequency) {
@@ -116,19 +116,19 @@ export default function Recurring({ userId }: RecurringProps) {
         return frequency;
     }
   };
-  
+
   // Calculate next occurrence
   const getNextOccurrence = (transaction: any) => {
     const startDate = new Date(transaction.startDate);
     const today = new Date();
-    
+
     if (startDate > today) {
       return startDate;
     }
-    
+
     // Calculate next occurrence based on frequency
     let nextDate = new Date(startDate);
-    
+
     while (nextDate <= today) {
       switch (transaction.frequency) {
         case 'monthly':
@@ -150,14 +150,14 @@ export default function Recurring({ userId }: RecurringProps) {
           return startDate;
       }
     }
-    
+
     return nextDate;
   };
-  
+
   // Calculate monthly impact
   const getMonthlyImpact = (transaction: any) => {
     const amount = parseFloat(transaction.amount);
-    
+
     switch (transaction.frequency) {
       case 'monthly':
         return amount;
@@ -173,28 +173,33 @@ export default function Recurring({ userId }: RecurringProps) {
         return amount;
     }
   };
-  
+
   // Calculate totals
   const totals = React.useMemo(() => {
     if (!filteredTransactions) return { monthlyIncome: 0, monthlyExpense: 0, monthlyBalance: 0 };
-    
+
     return filteredTransactions.reduce(
       (acc: any, transaction: any) => {
         const monthlyImpact = getMonthlyImpact(transaction);
-        
+
         if (transaction.type === 'income') {
           acc.monthlyIncome += monthlyImpact;
         } else {
           acc.monthlyExpense += monthlyImpact;
         }
-        
+
         acc.monthlyBalance = acc.monthlyIncome - acc.monthlyExpense;
         return acc;
       },
       { monthlyIncome: 0, monthlyExpense: 0, monthlyBalance: 0 }
     );
   }, [filteredTransactions]);
-  
+
+  const handleEditTransaction = () => {
+    // Implementar a lógica para editar a transação
+    console.log("Editar transação");
+  };
+
   return (
     <>
       <Card className="mb-6">
@@ -225,7 +230,7 @@ export default function Recurring({ userId }: RecurringProps) {
                 <p className="text-xs text-slate-500 mt-1">Impacto mensal de todas as receitas recorrentes</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
@@ -238,7 +243,7 @@ export default function Recurring({ userId }: RecurringProps) {
                 <p className="text-xs text-slate-500 mt-1">Impacto mensal de todas as despesas recorrentes</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
@@ -252,18 +257,18 @@ export default function Recurring({ userId }: RecurringProps) {
               </CardContent>
             </Card>
           </div>
-          
+
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="all">Todas</TabsTrigger>
               <TabsTrigger value="income">Receitas</TabsTrigger>
               <TabsTrigger value="expense">Despesas</TabsTrigger>
             </TabsList>
-            
+
             <div className="text-sm text-muted-foreground mt-4 mb-2">
               {filteredTransactions?.length || 0} transações recorrentes encontradas
             </div>
-            
+
             <TabsContent value="all" className="mt-0">
               <div className="rounded-md border">
                 <div className="overflow-x-auto">
@@ -296,7 +301,7 @@ export default function Recurring({ userId }: RecurringProps) {
                         filteredTransactions.map((transaction: any) => {
                           const nextOccurrence = getNextOccurrence(transaction);
                           const monthlyImpact = getMonthlyImpact(transaction);
-                          
+
                           return (
                             <tr key={transaction.id} className="border-b hover:bg-slate-50">
                               <td className="py-3 px-4">
@@ -352,6 +357,61 @@ export default function Recurring({ userId }: RecurringProps) {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 mr-1"
+                                  onClick={() => {
+                                    // Gerar transação manualmente a partir da recorrente
+                                    const transactionData = {
+                                      userId: transaction.user_id,
+                                      type: transaction.type,
+                                      description: transaction.description,
+                                      amount: transaction.amount,
+                                      categoryId: transaction.category_id,
+                                      date: new Date().toISOString(),
+                                      isRecurring: 'true',
+                                      recurringId: transaction.id
+                                    };
+
+                                    apiRequest('POST', '/api/transactions', transactionData)
+                                      .then(response => {
+                                        if (!response.ok) {
+                                          throw new Error('Falha ao criar transação');
+                                        }
+                                        return response.json();
+                                      })
+                                      .then(() => {
+                                        toast({
+                                          title: 'Sucesso',
+                                          description: 'Transação criada manualmente com sucesso!',
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
+                                        queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+                                      })
+                                      .catch(error => {
+                                        console.error('Erro ao criar transação:', error);
+                                        toast({
+                                          title: 'Erro',
+                                          description: 'Falha ao criar a transação',
+                                          variant: 'destructive',
+                                        });
+                                      });
+                                  }}
+                                  title="Gerar transação manualmente"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                                {/*
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-secondary hover:bg-primary/10 mr-1"
+                                  onClick={() => handleEditTransaction(transaction)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   className="h-8 w-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                                   onClick={() => setDeleteId(transaction.id)}
                                 >
@@ -373,7 +433,7 @@ export default function Recurring({ userId }: RecurringProps) {
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="income" className="mt-0">
               <div className="rounded-md border">
                 <div className="overflow-x-auto">
@@ -408,7 +468,7 @@ export default function Recurring({ userId }: RecurringProps) {
                           .map((transaction: any) => {
                             const nextOccurrence = getNextOccurrence(transaction);
                             const monthlyImpact = getMonthlyImpact(transaction);
-                            
+
                             return (
                               <tr key={transaction.id} className="border-b hover:bg-slate-50">
                                 <td className="py-3 px-4">
@@ -464,7 +524,7 @@ export default function Recurring({ userId }: RecurringProps) {
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="expense" className="mt-0">
               <div className="rounded-md border">
                 <div className="overflow-x-auto">
@@ -499,7 +559,7 @@ export default function Recurring({ userId }: RecurringProps) {
                           .map((transaction: any) => {
                             const nextOccurrence = getNextOccurrence(transaction);
                             const monthlyImpact = getMonthlyImpact(transaction);
-                            
+
                             return (
                               <tr key={transaction.id} className="border-b hover:bg-slate-50">
                                 <td className="py-3 px-4">
@@ -558,7 +618,7 @@ export default function Recurring({ userId }: RecurringProps) {
           </Tabs>
         </CardContent>
       </Card>
-      
+
       {/* Modals */}
       <ExpenseModal 
         isOpen={expenseModalOpen} 
@@ -566,14 +626,14 @@ export default function Recurring({ userId }: RecurringProps) {
         userId={userId}
         transaction={null}
       />
-      
+
       <IncomeModal 
         isOpen={incomeModalOpen} 
         onClose={() => setIncomeModalOpen(false)} 
         userId={userId}
         transaction={null}
       />
-      
+
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -599,7 +659,7 @@ export default function Recurring({ userId }: RecurringProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       <AttachmentViewerModal
         isOpen={attachmentViewerOpen}
         onClose={() => setAttachmentViewerOpen(false)}
