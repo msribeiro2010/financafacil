@@ -166,6 +166,9 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
 
   // Form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Obter o valor da despesa do formulário
+    const expenseAmount = parseFloat(values.amount || '0');
+    
     // Verificar se a despesa não ultrapassa o saldo + limite de cheque especial
       if (userData && financialSummary) {
         const currentBalance = financialSummary.currentBalance;
