@@ -272,6 +272,11 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
         });
     } else {
       // Simple transaction
+      // Converter isRecurring de string para booleano para evitar erro de validação
+      if (formData.has('isRecurring')) {
+        formData.set('isRecurring', formData.get('isRecurring') === 'true' ? 'true' : 'false');
+      }
+      
       if (isEditMode) {
         updateTransaction.mutate({ id: transaction.id, data: formData });
       } else {

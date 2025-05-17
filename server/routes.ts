@@ -559,6 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: req.body.amount,
         categoryId: parseInt(req.body.categoryId),
         date: req.body.date,
+        isRecurring: req.body.isRecurring === 'true',
         recurringId: req.body.recurringId ? parseInt(req.body.recurringId) : null,
         attachmentPath: req.file ? `/uploads/${req.file.filename}` : null,
       };
