@@ -184,15 +184,16 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
         const overdraftUsed = remainingBalance < 0 ? Math.abs(remainingBalance) : 0;
         const overdraftRemaining = overdraftLimit - overdraftUsed;
 
-        // Se o total disponível menos a nova despesa for negativo, mostrar alerta detalhado
-        if (availableTotal - netExpense < 0) {
+        // Se o saldo após a despesa for menor que o limite negativo permitido, mostrar alerta detalhado
+        // Exemplo: Se o saldo for -2000 e o limite for 5000, o mínimo permitido é -5000
+        if (remainingBalance < -overdraftLimit) {
           const result = window.confirm(
             `⚠️ ALERTA: Esta despesa ultrapassa seu saldo disponível e limite de cheque especial!\n\n` +
             `Saldo atual: R$ ${currentBalance.toFixed(2)}\n` +
             `Limite de cheque especial: R$ ${overdraftLimit.toFixed(2)}\n` +
             `Total disponível: R$ ${availableTotal.toFixed(2)}\n` +
             `Valor da despesa: R$ ${expenseAmount.toFixed(2)}\n\n` +
-            `Você excederá seu limite em R$ ${Math.abs(availableTotal - netExpense).toFixed(2)}\n\n` +
+            `Você excederá seu limite em R$ ${Math.abs(remainingBalance + overdraftLimit).toFixed(2)}\n\n` +
             `Deseja continuar mesmo assim?`
           );
 
