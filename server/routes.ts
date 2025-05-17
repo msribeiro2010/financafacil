@@ -777,8 +777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Limpar referências nas transações normais antes de excluir a transação recorrente
       try {
-        const { pool } =```tool_code
- await import('./db');
+        const { pool } = await import('./db');
         await pool.query('UPDATE transactions SET recurring_id = NULL WHERE recurring_id = $1', [transactionId]);
         console.log(`[DELETE /api/recurring/:id] Referências atualizadas para transação recorrente ${transactionId}`);
       } catch (dbError) {
