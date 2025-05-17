@@ -229,12 +229,28 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction> {
-    const [newTransaction] = await db
-      .insert(recurringTransactions)
-      .values(transaction)
-      .returning();
-    
-    return newTransaction;
+    try {
+      console.log(`[DEBUG] Criando transação recorrente:`, transaction);
+      const { pool } = await import('./db');
+      const result = await pool.query(
+        'INSERT INTO recurring_transactions (user_id, description, amount, type, category_id, frequency, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        [
+          transaction.userId, 
+          transaction.description, 
+          transaction.amount, 
+          transaction.type,
+          transaction.categoryId,
+          transaction.frequency,
+          transaction.startDate,
+          transaction.endDate || null
+        ]
+      );
+      console.log(`[DEBUG] Transação recorrente criada com sucesso:`, result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`[ERRO] Falha ao criar transação recorrente:`, error);
+      throw error;
+    }
   }
   
   async updateRecurringTransaction(id: number, transaction: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction> {
