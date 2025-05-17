@@ -205,17 +205,87 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
-    const [updatedTransaction] = await db
-      .update(transactions)
-      .set(transaction)
-      .where(eq(transactions.id, id))
-      .returning();
-
-    if (!updatedTransaction) {
-      throw new Error("Transaction not found");
+    try {
+      console.log(`[Storage] Atualizando transação ${id} com:`, transaction);
+      
+      // Construir a query de atualização dinamicamente
+      const { pool } = await import('./db');
+      
+      // Construir conjunto de campos para atualizar
+      const updateFields: string[] = [];
+      const values: any[] = [];
+      let paramCounter = 1;
+      
+      if (transaction.userId !== undefined) {
+        updateFields.push(`user_id = $${paramCounter++}`);
+        values.push(transaction.userId);
+      }
+      
+      if (transaction.description !== undefined) {
+        updateFields.push(`description = $${paramCounter++}`);
+        values.push(transaction.description);
+      }
+      
+      if (transaction.amount !== undefined) {
+        updateFields.push(`amount = $${paramCounter++}`);
+        values.push(transaction.amount);
+      }
+      
+      if (transaction.date !== undefined) {
+        updateFields.push(`date = $${paramCounter++}`);
+        values.push(transaction.date);
+      }
+      
+      if (transaction.type !== undefined) {
+        updateFields.push(`type = $${paramCounter++}`);
+        values.push(transaction.type);
+      }
+      
+      if (transaction.categoryId !== undefined) {
+        updateFields.push(`category_id = $${paramCounter++}`);
+        values.push(transaction.categoryId);
+      }
+      
+      if (transaction.attachmentPath !== undefined) {
+        updateFields.push(`attachment_path = $${paramCounter++}`);
+        values.push(transaction.attachmentPath);
+      }
+      
+      if (transaction.isRecurring !== undefined) {
+        updateFields.push(`is_recurring = $${paramCounter++}`);
+        values.push(transaction.isRecurring === 'true' || transaction.isRecurring === true);
+      }
+      
+      if (transaction.recurringId !== undefined) {
+        updateFields.push(`recurring_id = $${paramCounter++}`);
+        values.push(transaction.recurringId);
+      }
+      
+      // Se não há campos para atualizar, retorna erro
+      if (updateFields.length === 0) {
+        throw new Error("No fields to update");
+      }
+      
+      // Adicionar ID da transação aos parâmetros
+      values.push(id);
+      
+      // Executar a query
+      console.log(`[Storage] Executando query de atualização: UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter}`);
+      const result = await pool.query(
+        `UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+        values
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error("Transaction not found");
+      }
+      
+      console.log(`[Storage] Transação atualizada com sucesso:`, result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`[Storage] Erro ao atualizar transação ${id}:`, error);
+      throw error;
     }
-
-    return updatedTransaction;
   }
 
   async deleteTransaction(id: number): Promise<boolean> {
