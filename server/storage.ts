@@ -168,8 +168,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTransactionById(id: number): Promise<Transaction | undefined> {
-    const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
-    return transaction;
+    try {
+      const { pool } = await import('./db');
+      const result = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
+      return result.rows.length > 0 ? result.rows[0] : undefined;
+    } catch (error) {
+      console.error(`[ERRO] Falha ao buscar transação ${id}:`, error);
+      return undefined;
+    }
   }
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
@@ -214,24 +220,25 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTransaction(id: number): Promise<boolean> {
     try {
-      // Para SQLite, precisamos modificar a abordagem
-      // Primeiro buscamos a transação para verificar se existe
+      console.log(`[Storage] Solicitada exclusão da transação ${id}`);
+      
+      // Primeiro verificamos se a transação existe
       const transaction = await this.getTransactionById(id);
-
       if (!transaction) {
+        console.log(`[Storage] Transação ${id} não encontrada na pré-verificação`);
         return false;
       }
-
-      // Executamos a exclusão sem tentar retornar dados
-      db.delete(transactions)
-        .where(eq(transactions.id, id))
-        .run();
-
-      // Em SQLite, assumimos que a exclusão foi bem-sucedida se o registro existia
-      return true;
+      
+      // Utilizamos diretamente a pool para a exclusão
+      const { pool } = await import('./db');
+      const result = await pool.query('DELETE FROM transactions WHERE id = $1 RETURNING id', [id]);
+      
+      const success = result.rows && result.rows.length > 0;
+      console.log(`[Storage] Resultado da exclusão da transação ${id}: ${success ? 'SUCESSO' : 'FALHA'}`);
+      return success;
     } catch (error) {
-      console.error(`Erro ao excluir transação ${id}:`, error);
-      throw error;
+      console.error(`[Storage] Erro ao excluir transação ${id}:`, error);
+      return false; // Retornamos false em vez de lançar erro para maior robustez
     }
   }
 
