@@ -367,13 +367,46 @@ export class DatabaseStorage implements IStorage {
       }
     });
     
+    // Buscamos também as transações recorrentes
+    const recurringTransactions = await dbWithExtensions.getRecurringTransactions(userId);
+    
+    // Leva em consideração transações recorrentes que já deveriam ter sido processadas
+    let additionalIncome = 0;
+    let additionalExpenses = 0;
+    
+    const today = new Date();
+    
+    // Processa transações recorrentes anteriores ou atuais
+    recurringTransactions.forEach(transaction => {
+      const startDate = new Date(transaction.startDate || transaction.start_date);
+      
+      // Se a data de início da transação recorrente for igual ou anterior à hoje,
+      // contabiliza a transação no saldo atual
+      if (startDate <= today) {
+        const amount = parseFloat(transaction.amount as string);
+        if (transaction.type === "income") {
+          additionalIncome += amount;
+        } else {
+          additionalExpenses += amount;
+        }
+      }
+    });
+    
+    console.log('DEBUG [getTransactionSummary] Adicional das recorrentes:', {
+      additionalIncome,
+      additionalExpenses
+    });
+    
     // Calcula o saldo atual considerando o saldo inicial + receitas - despesas
-    const currentBalance = initialBalance + totalIncome - totalExpenses;
+    // incluindo transações recorrentes já processadas
+    const currentBalance = initialBalance + totalIncome + additionalIncome - totalExpenses - additionalExpenses;
     
     console.log('DEBUG [getTransactionSummary] Cálculo do saldo atual:', {
       initialBalance,
       totalIncome,
       totalExpenses,
+      additionalIncome,
+      additionalExpenses,
       currentBalance
     });
     // Se o saldo for negativo mas estiver dentro do limite do cheque especial,
@@ -382,9 +415,7 @@ export class DatabaseStorage implements IStorage {
     // For projected balance, include upcoming recurring transactions
     let projectedBalance = currentBalance;
     
-    // Get recurring transactions and calculate projected balance
-    const recurringTransactions = await dbWithExtensions.getRecurringTransactions(userId);
-    const today = new Date();
+    // Calculate projected balance using additional future recurring transactions
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
     for (const transaction of recurringTransactions) {
