@@ -709,23 +709,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verificar se o ID é válido
       if (isNaN(transactionId) || transactionId <= 0) {
+        console.log(`[PATCH /api/transactions/:id] ID inválido: ${req.params.id}`);
         return res.status(400).json({ message: "ID de transação inválido" });
       }
 
-      // Get existing transaction
-      const existingTransaction = await storage.getTransactionById(transactionId);
-      if (!existingTransaction) {
+      // Get existing transaction directly from database
+      const { pool } = await import('./db');
+      const existingTransactionResult = await pool.query('SELECT * FROM transactions WHERE id = $1', [transactionId]);
+      
+      if (existingTransactionResult.rows.length === 0) {
+        console.log(`[PATCH /api/transactions/:id] Transação não encontrada com ID: ${transactionId}`);
         return res.status(404).json({ message: "Transação não encontrada" });
       }
 
+      const existingTransaction = existingTransactionResult.rows[0];
       console.log(`[PATCH /api/transactions/:id] Transação existente:`, existingTransaction);
 
-      // Prepare update data
-      const updateData: any = {};
+      // Prepare update data - campos e valores para a consulta SQL
+      const updateFields = [];
+      const updateValues = [];
+      let valueIndex = 1;
+      const updateData: Record<string, any> = {};
 
-      // Copiar apenas os campos presentes na requisição
-      if (req.body.userId !== undefined) updateData.userId = parseInt(req.body.userId);
-      if (req.body.description !== undefined) updateData.description = req.body.description;
+      // Verificar explicitamente o status primeiro
+      if (req.body.status !== undefined) {
+        updateFields.push(`status = $${valueIndex}`);
+        updateValues.push(req.body.status);
+        updateData.status = req.body.status;
+        console.log(`[PATCH /api/transactions/:id] Status detectado: "${req.body.status}"`);
+        valueIndex++;
+      }
+
+      // Processar outros campos
+      if (req.body.userId !== undefined) {
+        updateFields.push(`user_id = $${valueIndex}`);
+        updateValues.push(parseInt(req.body.userId));
+        updateData.userId = parseInt(req.body.userId);
+        valueIndex++;
+      }
+
+      if (req.body.description !== undefined) {
+        updateFields.push(`description = $${valueIndex}`);
+        updateValues.push(req.body.description);
+        updateData.description = req.body.description;
+        valueIndex++;
+      }
+
       if (req.body.amount !== undefined) {
         // Garantir que o valor seja tratado corretamente
         let amount = req.body.amount;
@@ -742,48 +771,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error(`Valor inválido: ${amount}`);
         }
 
+        updateFields.push(`amount = $${valueIndex}`);
+        updateValues.push(amount);
         updateData.amount = amount;
-        console.log(`[PATCH /api/transactions/:id] Atualizando amount para: ${amount} (tipo: ${typeof amount})`);
+        console.log(`[PATCH /api/transactions/:id] Amount: ${amount}`);
+        valueIndex++;
       }
 
-      if (req.body.date !== undefined) updateData.date = req.body.date;
-      if (req.body.type !== undefined) updateData.type = req.body.type;
-      if (req.body.categoryId !== undefined) updateData.categoryId = parseInt(req.body.categoryId);
-      if (req.body.isRecurring !== undefined) updateData.isRecurring = req.body.isRecurring === 'true' || req.body.isRecurring === true;
-      if (req.body.recurringId !== undefined) updateData.recurringId = parseInt(req.body.recurringId) || null;
-      if (req.body.status !== undefined) {
-        updateData.status = req.body.status;
-        console.log(`[PATCH /api/transactions/:id] Atualizando status para: ${req.body.status}`);
+      if (req.body.date !== undefined) {
+        updateFields.push(`date = $${valueIndex}`);
+        updateValues.push(req.body.date);
+        updateData.date = req.body.date;
+        valueIndex++;
       }
 
-      // Garantir que o status seja atualizado mesmo quando for o único campo
-      if (Object.keys(updateData).length === 0 && req.body.status) {
-        updateData.status = req.body.status;
-        console.log(`[PATCH /api/transactions/:id] Atualizando apenas o status para: ${req.body.status}`);
+      if (req.body.type !== undefined) {
+        updateFields.push(`type = $${valueIndex}`);
+        updateValues.push(req.body.type);
+        updateData.type = req.body.type;
+        valueIndex++;
       }
 
-      // Handle the new attachment if present
+      if (req.body.categoryId !== undefined) {
+        updateFields.push(`category_id = $${valueIndex}`);
+        updateValues.push(parseInt(req.body.categoryId));
+        updateData.categoryId = parseInt(req.body.categoryId);
+        valueIndex++;
+      }
+
+      if (req.body.isRecurring !== undefined) {
+        const isRecurringValue = req.body.isRecurring === 'true' || req.body.isRecurring === true;
+        updateFields.push(`is_recurring = $${valueIndex}`);
+        updateValues.push(isRecurringValue);
+        updateData.isRecurring = isRecurringValue;
+        valueIndex++;
+      }
+
+      if (req.body.recurringId !== undefined) {
+        const recurringIdValue = req.body.recurringId ? parseInt(req.body.recurringId) : null;
+        updateFields.push(`recurring_id = $${valueIndex}`);
+        updateValues.push(recurringIdValue);
+        updateData.recurringId = recurringIdValue;
+        valueIndex++;
+      }
+
+      // Handle file attachment
       if (req.file) {
-        // Caminho completo do arquivo para o banco de dados
-        updateData.attachmentPath = `/uploads/${req.file.filename}`;
-        console.log(`[PATCH /api/transactions/:id] Novo anexo: ${updateData.attachmentPath}`);
+        const attachmentPath = `/uploads/${req.file.filename}`;
+        updateFields.push(`attachment_path = $${valueIndex}`);
+        updateValues.push(attachmentPath);
+        updateData.attachmentPath = attachmentPath;
+        console.log(`[PATCH /api/transactions/:id] Novo anexo: ${attachmentPath}`);
+        valueIndex++;
       } else if (req.body.removeAttachment === 'true') {
-        // Remove attachment if explicitly requested
+        updateFields.push(`attachment_path = $${valueIndex}`);
+        updateValues.push(null);
         updateData.attachmentPath = null;
         console.log(`[PATCH /api/transactions/:id] Removendo anexo`);
+        valueIndex++;
       }
 
-      console.log("[PATCH /api/transactions/:id] Dados para atualização:", updateData);
+      console.log(`[PATCH /api/transactions/:id] Dados para atualização:`, updateData);
 
-      if (Object.keys(updateData).length === 0) {
+      if (updateFields.length === 0) {
+        console.log(`[PATCH /api/transactions/:id] Nenhum campo para atualizar foi encontrado`);
         return res.status(400).json({ message: "Nenhum dado fornecido para atualização" });
       }
 
-      // Atualizar a transação no banco de dados
-      const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
-      console.log("[PATCH /api/transactions/:id] Transação atualizada:", updatedTransaction);
+      // Montar e executar a consulta SQL diretamente
+      const updateQuery = `
+        UPDATE transactions 
+        SET ${updateFields.join(', ')} 
+        WHERE id = $${valueIndex} 
+        RETURNING *
+      `;
+      updateValues.push(transactionId); // Adicionar o ID como último parâmetro
 
-      res.json(updatedTransaction);
+      console.log(`[PATCH /api/transactions/:id] Executando SQL: ${updateQuery}`);
+      console.log(`[PATCH /api/transactions/:id] Valores: ${JSON.stringify(updateValues)}`);
+
+      try {
+        // Executar a atualização
+        const updateResult = await pool.query(updateQuery, updateValues);
+        
+        if (updateResult.rows.length === 0) {
+          console.log(`[PATCH /api/transactions/:id] Nenhuma linha foi atualizada para ID: ${transactionId}`);
+          return res.status(500).json({ message: "Falha ao atualizar a transação" });
+        }
+        
+        const updatedTransaction = updateResult.rows[0];
+        console.log(`[PATCH /api/transactions/:id] Transação atualizada com sucesso:`, updatedTransaction);
+        
+        // Verificar se os campos foram realmente atualizados
+        console.log(`[PATCH /api/transactions/:id] Verificando status:`, {
+          antigo: existingTransaction.status,
+          novo: updatedTransaction.status,
+          enviado: req.body.status
+        });
+        
+        res.json(updatedTransaction);
+      } catch (dbError) {
+        console.error(`[PATCH /api/transactions/:id] Erro na execução do SQL:`, dbError);
+        return res.status(500).json({ 
+          message: "Erro ao executar a atualização da transação", 
+          error: dbError instanceof Error ? dbError.message : String(dbError) 
+        });
+      }
+
     } catch (error) {
       console.error("[PATCH /api/transactions/:id] Erro:", error);
       res.status(500).json({
