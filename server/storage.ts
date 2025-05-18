@@ -228,7 +228,11 @@ export class DatabaseStorage implements IStorage {
       
       if (transaction.amount !== undefined) {
         updateFields.push(`amount = $${paramCounter++}`);
-        values.push(transaction.amount);
+        // Garantir que amount seja tratado como um número ou string numérica válida
+        const amount = typeof transaction.amount === 'string' ? 
+          transaction.amount.replace(',', '.') : transaction.amount;
+        values.push(amount);
+        console.log(`[Storage] Atualizando amount para: ${amount} (tipo: ${typeof amount})`);
       }
       
       if (transaction.date !== undefined) {
