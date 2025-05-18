@@ -49,17 +49,17 @@ export default function Transactions({ userId }: TransactionsProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [attachmentViewerOpen, setAttachmentViewerOpen] = useState(false);
   const [selectedAttachmentPath, setSelectedAttachmentPath] = useState('');
-  
+
   // Fetch transactions
   const { data: transactions, isLoading } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
   });
-  
+
   // Fetch categories
   const { data: categories } = useQuery({
     queryKey: ['/api/categories'],
   });
-  
+
   // Delete transaction mutation
   const deleteTransaction = useMutation({
     mutationFn: async (id: number) => {
@@ -84,78 +84,78 @@ export default function Transactions({ userId }: TransactionsProps) {
       setDeleteId(null);
     }
   });
-  
+
   const handleEditTransaction = (transaction: any) => {
     // Criar uma cópia do objeto transaction para evitar mutação
     const transactionCopy = {...transaction};
-    
+
     // Garantir que o amount seja uma string para o formulário
     if (typeof transactionCopy.amount === 'number') {
       transactionCopy.amount = transactionCopy.amount.toString();
     }
-    
+
     // Converter categoryId para string
     if (transactionCopy.categoryId && typeof transactionCopy.categoryId === 'number') {
       transactionCopy.categoryId = transactionCopy.categoryId.toString();
     }
-    
+
     setSelectedTransaction(transactionCopy);
-    
+
     if (transaction.type === 'expense') {
       setExpenseModalOpen(true);
     } else {
       setIncomeModalOpen(true);
     }
   };
-  
+
   const handleAddExpense = () => {
     setSelectedTransaction(null);
     setExpenseModalOpen(true);
   };
-  
+
   const handleAddIncome = () => {
     setSelectedTransaction(null);
     setIncomeModalOpen(true);
   };
-  
+
   // Filter and sort transactions
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
-    
+
     return transactions
       .filter((transaction: any) => {
         // Filter by search term
         const matchesSearch = searchTerm === '' || 
           transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (transaction.category?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        
+
         // Filter by type
         const matchesType = activeTab === 'all' || transaction.type === activeTab;
-        
+
         // Filter by date
         const transactionDate = parseISO(transaction.date);
         const matchesDate = (!dateFilter.start || transactionDate >= dateFilter.start) && 
                            (!dateFilter.end || transactionDate <= dateFilter.end);
-        
+
         // Filter by category
         const matchesCategory = categoryFilter === 'all' || 
                               (transaction.categoryId?.toString() === categoryFilter);
-        
+
         return matchesSearch && matchesType && matchesDate && matchesCategory;
       })
       .sort((a: any, b: any) => {
         // Sort by date
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
-        
+
         return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
       });
   }, [transactions, searchTerm, activeTab, sortDirection, dateFilter, categoryFilter]);
-  
+
   // Calculate totals
   const totals = React.useMemo(() => {
     if (!filteredTransactions) return { income: 0, expense: 0, balance: 0 };
-    
+
     return filteredTransactions.reduce(
       (acc: any, transaction: any) => {
         const amount = parseFloat(transaction.amount);
@@ -170,7 +170,7 @@ export default function Transactions({ userId }: TransactionsProps) {
       { income: 0, expense: 0, balance: 0 }
     );
   }, [filteredTransactions]);
-  
+
   return (
     <>
       <Card className="mb-6">
@@ -200,7 +200,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                 />
               </div>
             </div>
-            
+
             <div className="flex space-x-2">
               <Popover>
                 <PopoverTrigger asChild>
@@ -248,7 +248,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                   </div>
                 </PopoverContent>
               </Popover>
-              
+
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -263,7 +263,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Button
                 variant="outline"
                 size="icon"
@@ -274,14 +274,14 @@ export default function Transactions({ userId }: TransactionsProps) {
               </Button>
             </div>
           </div>
-          
+
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="all">Todas</TabsTrigger>
               <TabsTrigger value="income">Receitas</TabsTrigger>
               <TabsTrigger value="expense">Despesas</TabsTrigger>
             </TabsList>
-            
+
             <div className="flex justify-between mt-4 mb-2">
               <div className="text-sm text-muted-foreground">
                 {filteredTransactions.length} transações encontradas
@@ -294,7 +294,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                 </span></div>
               </div>
             </div>
-            
+
             <TabsContent value="all" className="mt-0">
               <div className="rounded-md border">
                 <div className="overflow-x-auto">
@@ -347,20 +347,21 @@ export default function Transactions({ userId }: TransactionsProps) {
                               </span>
                             </td>
                             <td className="py-3 px-4 text-right">
-                              {transaction.attachment && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 mr-1"
-                                  onClick={() => {
-                                    setSelectedAttachmentPath(`/uploads/${transaction.attachment.split('/').pop()}`);
-                                    setAttachmentViewerOpen(true);
-                                  }}
-                                  title="Visualizar anexo/boleto"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              )}
+                              {(transaction.attachment || transaction.attachment_path) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 mr-1"
+                                    onClick={() => {
+                                      const attachmentPath = transaction.attachment_path || transaction.attachment;
+                                      setSelectedAttachmentPath(attachmentPath);
+                                      setAttachmentViewerOpen(true);
+                                    }}
+                                    title="Visualizar anexo/boleto"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -392,7 +393,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="income" className="mt-0">
               <div className="rounded-md border">
                 <div className="overflow-x-auto">
@@ -482,7 +483,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="expense" className="mt-0">
               <div className="rounded-md border">
                 <div className="overflow-x-auto">
@@ -575,7 +576,7 @@ export default function Transactions({ userId }: TransactionsProps) {
           </Tabs>
         </CardContent>
       </Card>
-      
+
       {/* Modals */}
       <ExpenseModal 
         isOpen={expenseModalOpen} 
@@ -583,14 +584,14 @@ export default function Transactions({ userId }: TransactionsProps) {
         userId={userId}
         transaction={selectedTransaction?.type === 'expense' ? selectedTransaction : undefined}
       />
-      
+
       <IncomeModal 
         isOpen={incomeModalOpen} 
         onClose={() => setIncomeModalOpen(false)} 
         userId={userId}
         transaction={selectedTransaction?.type === 'income' ? selectedTransaction : undefined}
       />
-      
+
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -610,7 +611,7 @@ export default function Transactions({ userId }: TransactionsProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       <AttachmentViewerModal
         isOpen={attachmentViewerOpen}
         onClose={() => setAttachmentViewerOpen(false)}

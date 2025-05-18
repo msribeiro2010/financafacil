@@ -657,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Prepare update data
       const updateData: any = {};
-      
+
       // Copiar apenas os campos presentes na requisição
       if (req.body.userId !== undefined) updateData.userId = parseInt(req.body.userId);
       if (req.body.description !== undefined) updateData.description = req.body.description;
@@ -670,24 +670,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Substituir vírgula por ponto
           amount = amount.replace(',', '.');
         }
-        
+
         // Validar se é um número válido
-        if (!isNaN(parseFloat(amount))) {
-          updateData.amount = amount;
-          console.log(`[PATCH /api/transactions/:id] Valor tratado: ${amount}`);
-        } else {
-          return res.status(400).json({ 
-            message: "Valor inválido para a transação", 
-            receivedValue: req.body.amount 
-          });
+        if (isNaN(parseFloat(String(amount)))) {
+          console.error(`[PATCH /api/transactions/:id] Valor inválido para amount: ${amount}`);
+          throw new Error(`Valor inválido: ${amount}`);
         }
+
+        updateData.amount = amount;
+        console.log(`[PATCH /api/transactions/:id] Atualizando amount para: ${amount} (tipo: ${typeof amount})`);
       }
-      
+
       if (req.body.date !== undefined) updateData.date = req.body.date;
       if (req.body.type !== undefined) updateData.type = req.body.type;
       if (req.body.categoryId !== undefined) updateData.categoryId = parseInt(req.body.categoryId);
-      if (req.body.isRecurring !== undefined) updateData.isRecurring = req.body.isRecurring;
-      if (req.body.recurringId !== undefined) updateData.recurringId = parseInt(req.body.recurringId);
+      if (req.body.isRecurring !== undefined) updateData.isRecurring = req.body.isRecurring === 'true' || req.body.isRecurring === true;
+      if (req.body.recurringId !== undefined) updateData.recurringId = parseInt(req.body.recurringId) || null;
 
       // Handle the new attachment if present
       if (req.file) {

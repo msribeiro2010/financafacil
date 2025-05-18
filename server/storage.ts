@@ -272,9 +272,30 @@ export class DatabaseStorage implements IStorage {
         values.push(transaction.categoryId);
       }
       
-      if (transaction.attachmentPath !== undefined) {
-        updateFields.push(`attachment_path = $${paramCounter++}`);
-        values.push(transaction.attachmentPath);
+      // Verificar o nome correto da coluna de anexo
+      try {
+        const columnResult = await pool.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'transactions' 
+          AND (column_name = 'attachment_path' OR column_name = 'attachment')
+        `);
+        
+        const attachmentColumn = columnResult.rows.length > 0 ? columnResult.rows[0].column_name : 'attachment_path';
+        console.log(`[Storage] Nome da coluna de anexo identificado: ${attachmentColumn}`);
+        
+        if (transaction.attachmentPath !== undefined) {
+          updateFields.push(`${attachmentColumn} = $${paramCounter++}`);
+          values.push(transaction.attachmentPath);
+          console.log(`[Storage] Atualizando ${attachmentColumn} para: ${transaction.attachmentPath}`);
+        }
+      } catch (columnError) {
+        console.error(`[Storage] Erro ao verificar coluna de anexo:`, columnError);
+        // Em caso de erro, tentamos com o nome padrão
+        if (transaction.attachmentPath !== undefined) {
+          updateFields.push(`attachment_path = $${paramCounter++}`);
+          values.push(transaction.attachmentPath);
+        }
       }
       
       if (transaction.isRecurring !== undefined) {
