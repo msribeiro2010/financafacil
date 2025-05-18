@@ -424,16 +424,33 @@ export default function Transactions({ userId }: TransactionsProps) {
                                     
                                     apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
                                       .then(async (response) => {
-                                        // Clonar a resposta para poder ler o corpo várias vezes
-                                        const responseClone = response.clone();
-                                        const responseText = await responseClone.text();
-                                        console.log(`Resposta do servidor (${response.status}): ${responseText}`);
-                                        
-                                        if (!response.ok) {
-                                          throw new Error(`Falha na resposta da API: ${response.status} - ${responseText}`);
+                                        let responseData;
+                                        try {
+                                          // Usar diretamente o json() da resposta original
+                                          responseData = await response.json();
+                                          console.log(`Resposta do servidor (${response.status}):`, responseData);
+                                        } catch (e) {
+                                          // Fallback para text quando não é JSON válido
+                                          const responseText = await response.text();
+                                          console.log(`Resposta do servidor como texto (${response.status}): ${responseText}`);
+                                          
+                                          if (!response.ok) {
+                                            throw new Error(`Falha na resposta da API: ${response.status} - ${responseText}`);
+                                          }
+                                          
+                                          // Tentar fazer parse manual se necessário
+                                          try {
+                                            responseData = JSON.parse(responseText);
+                                          } catch (jsonError) {
+                                            responseData = { success: true, message: responseText };
+                                          }
                                         }
                                         
-                                        // Tentar converter o texto em JSON
+                                        if (!response.ok) {
+                                          throw new Error(`Falha na resposta da API: ${response.status}`);
+                                        }
+                                        
+                                        return responseData;o em JSON
                                         try {
                                           return JSON.parse(responseText);
                                         } catch (e) {

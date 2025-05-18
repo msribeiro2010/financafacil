@@ -1,62 +1,64 @@
 
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from '../shared/schema';
-import * as readline from 'readline';
+// Script para adicionar a coluna status à tabela transactions
+import { pool, db } from '../server/db';
 
-const main = async () => {
-  console.log('Conectando ao banco de dados...');
-  
-  // Criar conexão com o banco de dados
-  const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
-  const client = postgres(connectionString);
-  const db = drizzle(client, { schema });
+console.log('[SCRIPT] Verificando e adicionando coluna status à tabela transactions...');
 
+async function addStatusColumn() {
   try {
-    console.log('Verificando se a coluna status já existe...');
+    // Verificar estrutura atual da tabela transactions
+    const tableInfoQuery = "PRAGMA table_info(transactions)";
+    const tableInfo = await db.run(tableInfoQuery);
+    console.log('[SCRIPT] Estrutura atual da tabela:', tableInfo);
     
-    // Verificar se a coluna já existe
-    const columnsResult = await client`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'transactions' 
-      AND column_name = 'status'
-    `;
-
-    if (columnsResult.length === 0) {
-      console.log('Adicionando coluna status à tabela transactions...');
+    // Verificar se a coluna status já existe
+    const hasStatusColumn = tableInfo.some((column: any) => column.name === 'status');
+    
+    if (!hasStatusColumn) {
+      console.log('[SCRIPT] Coluna status não encontrada. Adicionando...');
       
-      // Adicionar a coluna status
-      await client`
-        ALTER TABLE transactions 
-        ADD COLUMN status TEXT NOT NULL DEFAULT 'a_pagar'
-      `;
+      // SQLite não tem "add column if not exists"
+      await db.run(`ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'a_pagar'`);
+      console.log('[SCRIPT] Coluna status adicionada com sucesso!');
       
-      console.log('Coluna status adicionada com sucesso!');
+      // Atualizar valores iniciais
+      // Marcar receitas como pagas por padrão
+      await db.run(`UPDATE transactions SET status = 'paga' WHERE type = 'income'`);
+      console.log('[SCRIPT] Receitas marcadas como pagas');
+      
+      // Marcar despesas vencidas como atrasadas
+      const today = new Date().toISOString().split('T')[0];
+      await db.run(
+        `UPDATE transactions SET status = 'atrasada' 
+         WHERE type = 'expense' AND date < ? AND (status = 'a_pagar' OR status IS NULL)`,
+        [today]
+      );
+      console.log('[SCRIPT] Despesas vencidas marcadas como atrasadas');
     } else {
-      console.log('A coluna status já existe na tabela transactions.');
+      console.log('[SCRIPT] A coluna status já existe.');
     }
-
-    // Atualizar status das transações vencidas
-    console.log('Atualizando status de transações vencidas...');
-    const today = new Date().toISOString().split('T')[0];
     
-    const updateResult = await client`
-      UPDATE transactions
-      SET status = 'atrasada'
-      WHERE type = 'expense'
-      AND date < ${today}
-      AND status = 'a_pagar'
-    `;
+    // Verificar a estrutura atualizada
+    const updatedTableInfo = await db.run(tableInfoQuery);
+    console.log('[SCRIPT] Estrutura final da tabela:', updatedTableInfo);
     
-    console.log(`${updateResult.count} transações atualizadas para 'atrasada'.`);
-    
-    console.log('Migração concluída com sucesso!');
+    return true;
   } catch (error) {
-    console.error('Erro durante a migração:', error);
-  } finally {
-    await client.end();
+    console.error('[SCRIPT] Erro ao adicionar coluna status:', error);
+    return false;
   }
-};
+}
 
-main().catch(console.error);
+addStatusColumn()
+  .then((success) => {
+    if (success) {
+      console.log('[SCRIPT] Script de adição de coluna status finalizado com sucesso!');
+    } else {
+      console.log('[SCRIPT] Script finalizado com erros. Verifique os logs acima.');
+    }
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error('[SCRIPT] Erro crítico ao executar script:', err);
+    process.exit(1);
+  });
