@@ -7,42 +7,37 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export const apiRequest = async (method: string, url: string, data?: any) => {
+export const apiRequest = async (
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  endpoint: string,
+  data?: any
+) => {
+  const url = `${endpoint}`;
+
   const options: RequestInit = {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      'Accept': 'application/json',
     },
     credentials: 'include',
   };
 
-  if (data) {
-    if (data instanceof FormData) {
-      console.log("Enviando como FormData", method, url);
-      options.headers = {};  // Permitir que o navegador defina Content-Type com boundary
-      options.body = data;
-    } else if (typeof data === 'object') {
-      console.log("Enviando como JSON", method, url, data);
-      options.body = JSON.stringify(data);
-    } else {
-      console.log("Enviando como texto", method, url, data);
-      options.body = String(data);
-    }
+  // Se não for FormData, adiciona o header Content-Type
+  if (data && !(data instanceof FormData)) {
+    options.headers = {
+      ...options.headers,
+      'Content-Type': 'application/json',
+    };
+    options.body = JSON.stringify(data);
+  } else if (data instanceof FormData) {
+    // Remove o Content-Type para o browser definir automaticamente com o boundary correto
+    options.body = data;
+    console.log(`Sending as FormData`, method, endpoint);
   }
 
-  try {
-    const response = await fetch(url, options);
+  console.log(`Enviando requisição ${method} para ${url}`);
 
-    // Log para depuração
-    if (!response.ok) {
-      console.error(`Erro na requisição ${method} ${url}:`, response.status, response.statusText);
-    }
-
-    return response;
-  } catch (error) {
-    console.error(`Falha na requisição ${method} ${url}:`, error);
-    throw error;
-  }
+  return fetch(url, options);
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

@@ -704,6 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[PATCH /api/transactions/:id] Body para transação ${transactionId}:`, req.body);
       console.log(`[PATCH /api/transactions/:id] Headers:`, req.headers);
       console.log(`[PATCH /api/transactions/:id] Conteúdo do status:`, req.body.status);
+      console.log(`[PATCH /api/transactions/:id] Tipo de Content-Type:`, req.headers['content-type']);
       console.log(`[PATCH /api/transactions/:id] Arquivo enviado:`, req.file || "Nenhum");
 
       // Verificar se o ID é válido
@@ -753,6 +754,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.status !== undefined) {
         updateData.status = req.body.status;
         console.log(`[PATCH /api/transactions/:id] Atualizando status para: ${req.body.status}`);
+      }
+
+      // Garantir que o status seja atualizado mesmo quando for o único campo
+      if (Object.keys(updateData).length === 0 && req.body.status) {
+        updateData.status = req.body.status;
+        console.log(`[PATCH /api/transactions/:id] Atualizando apenas o status para: ${req.body.status}`);
       }
 
       // Handle the new attachment if present
