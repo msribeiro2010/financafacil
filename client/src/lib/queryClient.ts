@@ -7,32 +7,37 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const options: RequestInit = {
-    method,
-    credentials: "include",
-  };
+export const apiRequest = async (method: string, url: string, data?: any) => {
+  try {
+    console.log(`[API] Iniciando requisição ${method} para ${url}`);
+    const options: any = {
+      method,
+      headers: {},
+    };
 
-  if (data) {
-    if (data instanceof FormData) {
-      // No need to set Content-Type for FormData, browser will do it
-      options.body = data;
-      console.log('Sending as FormData', method, url);
-    } else {
-      options.headers = { "Content-Type": "application/json" };
-      options.body = JSON.stringify(data);
-      console.log('Sending as JSON', method, url, data);
+    if (data) {
+      if (data instanceof FormData) {
+        options.body = data;
+        console.log(`[API] Enviando dados como FormData para ${url}`);
+      } else {
+        options.headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(data);
+        console.log(`[API] Enviando dados como JSON para ${url}:`, data);
+      }
     }
-  }
 
-  const res = await fetch(url, options);
+    console.log(`[API] Executando fetch para ${url}`);
+    const response = await fetch(url, options);
+    console.log(`[API] Resposta recebida de ${url}, status: ${response.status}`);
+
+  const res = await response;
   await throwIfResNotOk(res);
   return res;
-}
+} catch (error: any) {
+    console.error(`[API] Erro na requisição ${method} para ${url}:`, error);
+    throw error;
+  }
+};
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
