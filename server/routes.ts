@@ -546,21 +546,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = parseInt(req.params.userId);
-      
+
       // Verificar se o userId é um número válido
       if (isNaN(userId) || userId <= 0) {
         console.error(`[GET /api/transactions/:userId] ID de usuário inválido: ${req.params.userId}`);
         return res.status(400).json({ message: "ID de usuário inválido" });
       }
-      
+
       console.log(`[GET /api/transactions/:userId] Buscando transações para usuário ${userId}`);
 
       // Atualizar status de transações vencidas primeiro
       const { pool } = await import('./db');
       const today = new Date().toISOString().split('T')[0];
-      
+
       console.log(`[GET /api/transactions/:userId] Atualizando status de transações vencidas (data atual: ${today})`);
-      
+
       try {
         // Atualizar transações vencidas
         await pool.query(`
@@ -571,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND date < $2
             AND status = 'a_pagar'
         `, [userId, today]);
-        
+
         console.log(`[GET /api/transactions/:userId] Status de transações vencidas atualizado`);
       } catch (updateError) {
         console.error(`[GET /api/transactions/:userId] Erro ao atualizar status de transações:`, updateError);
@@ -587,7 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           WHERE t.user_id = $1
           ORDER BY t.date DESC
         `, [userId]);
-        
+
         // Transformar os dados para incluir a categoria como um objeto aninhado
         const transactions = result.rows.map(row => ({
           ...row,
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get existing transaction directly from database
       const { pool } = await import('./db');
       const existingTransactionResult = await pool.query('SELECT * FROM transactions WHERE id = $1', [transactionId]);
-      
+
       if (existingTransactionResult.rows.length === 0) {
         console.log(`[PATCH /api/transactions/:id] Transação não encontrada com ID: ${transactionId}`);
         return res.status(404).json({ message: "Transação não encontrada" });
@@ -853,23 +853,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Executar a atualização
         const updateResult = await pool.query(updateQuery, updateValues);
-        
+
         if (updateResult.rows.length === 0) {
           console.log(`[PATCH /api/transactions/:id] Nenhuma linha foi atualizada para ID: ${transactionId}`);
           return res.status(500).json({ message: "Falha ao atualizar a transação" });
         }
-        
+
         const updatedTransaction = updateResult.rows[0];
         console.log(`[PATCH /api/transactions/:id] Transação atualizada com sucesso:`, updatedTransaction);
-        
+
         // Verificar se os campos foram realmente atualizados
         console.log(`[PATCH /api/transactions/:id] Verificando status:`, {
           antigo: existingTransaction.status,
           novo: updatedTransaction.status,
           enviado: req.body.status
         });
-        
-        res.json(updatedTransaction);
+
+        // Retornar resposta detalhada para facilitar a depuração no cliente
+        res.json({
+          success: true,
+          transaction: updatedTransaction,
+          message: "Transação atualizada com sucesso",
+          updatedFields: updateFields
+        });
       } catch (dbError) {
         console.error(`[PATCH /api/transactions/:id] Erro na execução do SQL:`, dbError);
         return res.status(500).json({ 

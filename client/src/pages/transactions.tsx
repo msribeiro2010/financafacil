@@ -415,18 +415,39 @@ export default function Transactions({ userId }: TransactionsProps) {
                                     console.log("FormData criado com status:", newStatus);
                                     formData.append('status', newStatus);
 
+                                    console.log(`Enviando requisição para atualizar status da transação ${transaction.id} para ${newStatus}`);
+                                    
+                                    // Verificar se o FormData está correto
+                                    for (const pair of formData.entries()) {
+                                      console.log(`FormData contém: ${pair[0]}: ${pair[1]}`);
+                                    }
+                                    
                                     apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
-                                      .then((response) => {
+                                      .then(async (response) => {
+                                        // Capturar e logar o texto da resposta mesmo em caso de erro
+                                        const responseText = await response.text();
+                                        console.log(`Resposta do servidor (${response.status}): ${responseText}`);
+                                        
                                         if (!response.ok) {
-                                          throw new Error('Falha na resposta da API');
+                                          throw new Error(`Falha na resposta da API: ${response.status} - ${responseText}`);
                                         }
-                                        return response.json();
+                                        
+                                        // Tentar converter o texto em JSON
+                                        try {
+                                          return JSON.parse(responseText);
+                                        } catch (e) {
+                                          console.error('Erro ao fazer parse da resposta JSON:', e);
+                                          return { success: false, message: responseText };
+                                        }
                                       })
                                       .then((data) => {
                                         console.log('Status atualizado com sucesso:', data);
+                                        
+                                        // Recarregar os dados
                                         queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
-                                        queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
+                                        queryClient.invalidateQueries({ queryKey: [`/api/upcoming-bills/${userId}`] });
                                         queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+                                        
                                         toast({
                                           title: `${transaction.description}`,
                                           description: `${newStatus === 'paga' ? '✅ Marcada como paga' : '⚠️ Desmarcada como paga'}`,
@@ -437,7 +458,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                                         console.error('Erro ao atualizar status:', error);
                                         toast({
                                           title: "Erro",
-                                          description: "Não foi possível atualizar o status.",
+                                          description: "Não foi possível atualizar o status da transação. Tente novamente.",
                                           variant: "destructive",
                                         });
                                       });

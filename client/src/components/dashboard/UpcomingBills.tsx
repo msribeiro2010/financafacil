@@ -27,11 +27,11 @@ interface UpcomingBillsProps {
 export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps) {
   const { toast } = useToast();
   const [deleteId, setDeleteId] = React.useState<number | null>(null);
-  
+
   const { data: upcomingBills, isLoading } = useQuery({
     queryKey: [`/api/upcoming/${userId}`],
   });
-  
+
   const deleteTransaction = useMutation({
     mutationFn: async (id: number) => {
       return apiRequest('DELETE', `/api/transactions/${id}`);
@@ -55,7 +55,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
       setDeleteId(null);
     }
   });
-  
+
   const getDueDateLabel = (date: string, status: string) => {
     // Se já está paga, mostramos essa informação independente da data
     if (status === 'paga') {
@@ -64,14 +64,14 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
         className: "bg-green-100 text-green-800"
       };
     }
-    
+
     const dueDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     // Verifica se está atrasada
     if (status === 'atrasada') {
       return {
@@ -79,7 +79,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
         className: "bg-red-500 text-white"
       };
     }
-    
+
     if (diffDays === 0) {
       return {
         label: "Vence hoje",
@@ -108,7 +108,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
       };
     }
   };
-  
+
   return (
     <>
       <Card className="mt-6">
@@ -119,7 +119,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
               Ver todas
             </Link>
           </div>
-          
+
           <div className="overflow-x-auto">
             {isLoading ? (
               <div className="py-8 text-center">
@@ -141,7 +141,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                 <tbody>
                   {upcomingBills.map((bill: any) => {
                     const dueDate = getDueDateLabel(bill.date, bill.status);
-                    
+
                     return (
                       <tr key={bill.id} className="border-b border-slate-100 hover:bg-slate-50">
                         <td className="py-3 px-4">
@@ -172,34 +172,48 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                             onClick={() => {
                               console.log(`Alterando status da conta ID ${bill.id} de "${bill.status}" para "${bill.status === 'paga' ? 'a_pagar' : 'paga'}"`);
                               const newStatus = bill.status === 'paga' ? 'a_pagar' : 'paga';
-                              
+
                               // Mostrar alerta de confirmação se estiver desmarcando como paga
                               if (bill.status === 'paga' && !window.confirm('Tem certeza que deseja desmarcar esta conta como não paga?')) {
                                 return;
                               }
-                              
+
                               // Create FormData object for compatibility with the API
                               const formData = new FormData();
                               formData.append('status', newStatus);
                               console.log(`UpcomingBills: FormData criado com status: ${newStatus} para transação ${bill.id}`);
-                              
+
+                              // Verificar se o FormData está correto
+                              for (const pair of formData.entries()) {
+                                console.log(`UpcomingBills - FormData contém: ${pair[0]}: ${pair[1]}`);
+                              }
+
                               apiRequest('PATCH', `/api/transactions/${bill.id}`, formData)
-                                .then(() => {
+                                .then(async (response) => {
+                                  // Capturar e logar o texto da resposta mesmo em caso de erro
+                                  const responseText = await response.text();
+                                  console.log(`UpcomingBills - Resposta do servidor (${response.status}): ${responseText}`);
+
+                                  if (!response.ok) {
+                                    throw new Error(`Falha na resposta da API: ${response.status} - ${responseText}`);
+                                  }
+
                                   console.log('Status atualizado com sucesso');
                                   queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
                                   queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
                                   queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+
                                   toast({
-                                    title: `Conta ${newStatus === 'paga' ? 'paga' : 'a pagar'}`,
-                                    description: `${bill.description} foi ${newStatus === 'paga' ? 'marcada como paga' : 'desmarcada'}`,
+                                    title: `${bill.description}`,
+                                    description: `${newStatus === 'paga' ? '✅ Marcada como paga' : '⚠️ Desmarcada como paga'}`,
                                     variant: newStatus === 'paga' ? 'default' : 'destructive',
                                   });
                                 })
                                 .catch((error) => {
-                                  console.error('Erro ao atualizar status:', error);
+                                  console.error('UpcomingBills - Erro ao atualizar status:', error);
                                   toast({
                                     title: "Erro",
-                                    description: "Não foi possível atualizar o status.",
+                                    description: "Não foi possível atualizar o status da conta. Tente novamente.",
                                     variant: "destructive",
                                   });
                                 });
@@ -251,7 +265,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
           </div>
         </CardContent>
       </Card>
-      
+
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
