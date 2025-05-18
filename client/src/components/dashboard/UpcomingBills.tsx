@@ -172,6 +172,12 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                             onClick={() => {
                               console.log(`Alterando status da conta ID ${bill.id} de "${bill.status}" para "${bill.status === 'paga' ? 'a_pagar' : 'paga'}"`);
                               const newStatus = bill.status === 'paga' ? 'a_pagar' : 'paga';
+                              
+                              // Mostrar alerta de confirmação se estiver desmarcando como paga
+                              if (bill.status === 'paga' && !window.confirm('Tem certeza que deseja desmarcar esta conta como não paga?')) {
+                                return;
+                              }
+                              
                               apiRequest('PATCH', `/api/transactions/${bill.id}`, { status: newStatus })
                                 .then(() => {
                                   console.log('Status atualizado com sucesso');
@@ -179,8 +185,9 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                   queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
                                   queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
                                   toast({
-                                    title: `Conta marcada como ${newStatus === 'paga' ? 'paga' : 'a pagar'}`,
-                                    description: "Status atualizado com sucesso.",
+                                    title: `Conta ${newStatus === 'paga' ? 'paga' : 'a pagar'}`,
+                                    description: `${bill.description} foi ${newStatus === 'paga' ? 'marcada como paga' : 'desmarcada'}`,
+                                    variant: newStatus === 'paga' ? 'default' : 'destructive',
                                   });
                                 })
                                 .catch((error) => {
@@ -193,11 +200,18 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                 });
                             }}
                           >
-                            {bill.status === 'paga' ? 'Paga' : bill.status === 'atrasada' ? 'Atrasada' : 'A Pagar'}
+                            {bill.status === 'paga' ? '✓ Paga' : bill.status === 'atrasada' ? '⚠️ Atrasada' : '💰 Pagar'}
                           </Button>
                         </td>
                         <td className="py-3 px-4 text-right font-medium">
-                          {formatCurrency(parseFloat(bill.amount))}
+                          <span className={bill.status === 'paga' ? 'text-slate-400 line-through' : 'text-destructive font-bold'}>
+                            {formatCurrency(parseFloat(bill.amount))}
+                          </span>
+                          {bill.status === 'paga' && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              Pago
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <Button

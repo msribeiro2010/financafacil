@@ -355,14 +355,23 @@ export default function Transactions({ userId }: TransactionsProps) {
                                   }`}
                                   onClick={() => {
                                     const newStatus = transaction.status === 'paga' ? 'a_pagar' : 'paga';
+                                    
+                                    // Mostrar alerta de confirmação se estiver desmarcando como paga
+                                    if (transaction.status === 'paga') {
+                                      if (!window.confirm(`Tem certeza que deseja desmarcar "${transaction.description}" como não paga?`)) {
+                                        return;
+                                      }
+                                    }
+                                    
                                     apiRequest('PATCH', `/api/transactions/${transaction.id}`, { status: newStatus })
                                       .then(() => {
                                         queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
                                         queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
                                         queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
                                         toast({
-                                          title: `Conta marcada como ${newStatus === 'paga' ? 'paga' : 'a pagar'}`,
-                                          description: "Status atualizado com sucesso.",
+                                          title: `${transaction.description}`,
+                                          description: `${newStatus === 'paga' ? '✅ Marcada como paga' : '⚠️ Desmarcada como paga'}`,
+                                          variant: newStatus === 'paga' ? 'default' : 'destructive',
                                         });
                                       })
                                       .catch((error) => {
@@ -375,17 +384,27 @@ export default function Transactions({ userId }: TransactionsProps) {
                                       });
                                   }}
                                 >
-                                  {transaction.status === 'paga' ? 'Paga' : transaction.status === 'atrasada' ? 'Atrasada' : 'A Pagar'}
+                                  {transaction.status === 'paga' ? '✓ Paga' : transaction.status === 'atrasada' ? '⚠️ Atrasada' : '💰 Pagar'}
                                 </Button>
                               )}
                             </td>
                             <td className="py-3 px-4 text-right font-medium">
                               <span className={`${transaction.type === 'expense' 
-                                ? (transaction.status === 'paga' ? 'text-slate-500 line-through' : 'text-destructive') 
+                                ? (transaction.status === 'paga' ? 'text-slate-400 line-through' : 'text-destructive') 
                                 : 'text-accent'}`}>
                                 {transaction.type === 'expense' ? '- ' : '+ '}
                                 {formatCurrency(parseFloat(transaction.amount))}
                               </span>
+                              {transaction.type === 'expense' && transaction.status === 'paga' && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  Pago
+                                </span>
+                              )}
+                              {transaction.type === 'expense' && transaction.status === 'atrasada' && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                  Atrasado
+                                </span>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-right">
                               {(transaction.attachment || transaction.attachment_path) && (

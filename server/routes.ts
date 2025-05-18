@@ -542,6 +542,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.userId);
       console.log(`[GET /api/transactions/:userId] Buscando transações para usuário ${userId}`);
 
+      // Atualizar status de transações vencidas primeiro
+      const { pool } = await import('./db');
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Atualizar transações vencidas
+      await pool.query(`
+        UPDATE transactions 
+        SET status = 'atrasada' 
+        WHERE user_id = $1 
+          AND type = 'expense'
+          AND date < $2
+          AND status = 'a_pagar'
+      `, [userId, today]);
+      
+      console.log(`[GET /api/transactions/:userId] Status de transações vencidas atualizado`);
+
       // Usar a função do dbWithExtensions
       const { dbWithExtensions } = await import('./db');
       const transactions = await dbWithExtensions.getTransactions(userId);
