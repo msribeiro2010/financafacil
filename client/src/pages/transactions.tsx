@@ -86,7 +86,21 @@ export default function Transactions({ userId }: TransactionsProps) {
   });
   
   const handleEditTransaction = (transaction: any) => {
-    setSelectedTransaction(transaction);
+    // Criar uma cópia do objeto transaction para evitar mutação
+    const transactionCopy = {...transaction};
+    
+    // Garantir que o amount seja uma string para o formulário
+    if (typeof transactionCopy.amount === 'number') {
+      transactionCopy.amount = transactionCopy.amount.toString();
+    }
+    
+    // Converter categoryId para string
+    if (transactionCopy.categoryId && typeof transactionCopy.categoryId === 'number') {
+      transactionCopy.categoryId = transactionCopy.categoryId.toString();
+    }
+    
+    setSelectedTransaction(transactionCopy);
+    
     if (transaction.type === 'expense') {
       setExpenseModalOpen(true);
     } else {

@@ -82,15 +82,24 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   // Update form when transaction changes
   useEffect(() => {
     if (transaction) {
+      console.log("Editando transação:", transaction);
+      
+      // Garantir que valores estejam no formato correto
+      const formattedAmount = typeof transaction.amount === 'number' 
+        ? transaction.amount.toFixed(2) 
+        : transaction.amount || '';
+        
+      const categoryIdStr = transaction.categoryId?.toString() || '';
+      
       form.reset({
         description: transaction.description || '',
-        amount: transaction.amount || '',
+        amount: formattedAmount,
         date: new Date(transaction.date).toISOString().slice(0, 10),
-        categoryId: transaction.categoryId?.toString() || '',
-        isRecurring: transaction.isRecurring || false,
+        categoryId: categoryIdStr,
+        isRecurring: !!transaction.isRecurring,
       });
 
-      setShowRecurring(transaction.isRecurring || false);
+      setShowRecurring(!!transaction.isRecurring);
     } else {
       form.reset({
         description: '',
@@ -400,11 +409,16 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                     <Input 
                       placeholder="0,00" 
                       {...field} 
+                      value={field.value || ''}
                       onChange={(e) => {
                         // Format as currency
                         const value = e.target.value.replace(/\D/g, '');
-                        const formattedValue = (parseInt(value) / 100).toFixed(2);
-                        field.onChange(formattedValue === 'NaN' ? '' : formattedValue);
+                        if (value === '') {
+                          field.onChange('');
+                        } else {
+                          const formattedValue = (parseInt(value) / 100).toFixed(2);
+                          field.onChange(formattedValue === 'NaN' ? '' : formattedValue);
+                        }
                       }}
                     />
                   </FormControl>
