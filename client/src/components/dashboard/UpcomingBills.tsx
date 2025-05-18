@@ -192,20 +192,20 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                 .then(async (response) => {
                                   let responseData;
                                   let responseText;
-                                  
+
                                   try {
                                     // Usar diretamente o json() da resposta original
                                     responseData = await response.json();
                                     console.log(`UpcomingBills - Resposta do servidor (${response.status}):`, responseData);
                                   } catch (e) {
                                     // Fallback para text quando não é JSON válido
-                                    responseText = await response.text();
+                                    const responseText = await response.text();
                                     console.log(`UpcomingBills - Resposta do servidor como texto (${response.status}): ${responseText}`);
-                                    
+
                                     if (!response.ok) {
                                       throw new Error(`UpcomingBills - Falha na resposta da API: ${response.status} - ${responseText}`);
                                     }
-                                    
+
                                     // Tentar fazer parse manual se necessário
                                     try {
                                       responseData = JSON.parse(responseText);
@@ -213,7 +213,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                       responseData = { success: true, message: responseText };
                                     }
                                   }
-                                  
+
                                   if (!response.ok) {
                                     throw new Error(`UpcomingBills - Falha na resposta da API: ${response.status}`);
                                   }
@@ -228,7 +228,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                     description: `${newStatus === 'paga' ? '✅ Marcada como paga' : '⚠️ Desmarcada como paga'}`,
                                     variant: newStatus === 'paga' ? 'default' : 'destructive',
                                   });
-                                  
+
                                   return responseData;
                                 })
                                 .catch((error) => {
