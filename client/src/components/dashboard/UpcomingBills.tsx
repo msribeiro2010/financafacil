@@ -190,8 +190,9 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
 
                               apiRequest('PATCH', `/api/transactions/${bill.id}`, formData)
                                 .then(async (response) => {
-                                  // Capturar e logar o texto da resposta mesmo em caso de erro
-                                  const responseText = await response.text();
+                                  // Clonar a resposta para poder ler o corpo várias vezes
+                                  const responseClone = response.clone();
+                                  const responseText = await responseClone.text();
                                   console.log(`UpcomingBills - Resposta do servidor (${response.status}): ${responseText}`);
 
                                   if (!response.ok) {

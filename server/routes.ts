@@ -740,15 +740,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let valueIndex = 1;
       const updateData: Record<string, any> = {};
 
-      // Verificar explicitamente o status primeiro - processando corretamente o FormData
-      if (req.body.status !== undefined) {
+      // Verificar se a coluna status existe antes de tentar atualizá-la
+      try {
         // Se o status estiver presente no corpo da requisição, usá-lo
-        const statusValue = req.body.status;
-        updateFields.push(`status = $${valueIndex}`);
-        updateValues.push(statusValue);
-        updateData.status = statusValue;
-        console.log(`[PATCH /api/transactions/:id] Status detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
-        valueIndex++;
+        if (req.body.status !== undefined) {
+          const statusValue = req.body.status;
+          
+          // Verificar primeiro se a coluna status existe
+          const { pool } = await import('./db');
+          const columnExists = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'transactions' 
+            AND column_name = 'status'
+          `);
+          
+          if (columnExists.rows.length > 0) {
+            // A coluna existe, podemos usá-la
+            updateFields.push(`status = $${valueIndex}`);
+            updateValues.push(statusValue);
+            updateData.status = statusValue;
+            console.log(`[PATCH /api/transactions/:id] Status detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
+            valueIndex++;
+          } else {
+            console.log(`[PATCH /api/transactions/:id] Coluna 'status' não existe na tabela transactions. Ignorando atualização de status.`);
+          }
+        }
+      } catch (error) {
+        console.error(`[PATCH /api/transactions/:id] Erro ao verificar coluna status:`, error);
       }
 
       // Processar outros campos
