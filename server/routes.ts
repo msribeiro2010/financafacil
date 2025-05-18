@@ -17,25 +17,30 @@ const uploadsDir = path.join(process.cwd(), "uploads");
 // Ensure uploads directory exists
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log(`[SERVER] Diretório de uploads criado: ${uploadsDir}`);
 }
 
 const storage_config = multer.diskStorage({
   destination: function (_req, _file, cb) {
+    console.log(`[SERVER] Salvando arquivo no diretório: ${uploadsDir}`);
     cb(null, uploadsDir);
   },
   filename: function (_req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    const filename = uniqueSuffix + path.extname(file.originalname);
+    console.log(`[SERVER] Nome gerado para o arquivo: ${filename}, original: ${file.originalname}`);
+    cb(null, filename);
   },
 });
 
 const upload = multer({
   storage: storage_config,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 15 * 1024 * 1024, // 15MB limit
   },
   fileFilter: (_req, file, cb) => {
     // Accept images and PDFs
+    console.log(`[SERVER] Verificando tipo de arquivo: ${file.mimetype}`);
     if (
       file.mimetype === "image/png" ||
       file.mimetype === "image/jpg" ||
@@ -44,6 +49,7 @@ const upload = multer({
     ) {
       cb(null, true);
     } else {
+      console.log(`[SERVER] Tipo de arquivo não permitido: ${file.mimetype}`);
       cb(new Error("Apenas arquivos PNG, JPG e PDF são permitidos"));
     }
   },
@@ -634,6 +640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const transactionId = parseInt(req.params.id);
       console.log(`[PATCH /api/transactions/:id] Body para transação ${transactionId}:`, req.body);
+      console.log(`[PATCH /api/transactions/:id] Arquivo enviado:`, req.file || "Nenhum");
 
       // Verificar se o ID é válido
       if (isNaN(transactionId) || transactionId <= 0) {
@@ -684,6 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Handle the new attachment if present
       if (req.file) {
+        // Caminho completo do arquivo para o banco de dados
         updateData.attachmentPath = `/uploads/${req.file.filename}`;
         console.log(`[PATCH /api/transactions/:id] Novo anexo: ${updateData.attachmentPath}`);
       } else if (req.body.removeAttachment === 'true') {
@@ -698,6 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Nenhum dado fornecido para atualização" });
       }
 
+      // Atualizar a transação no banco de dados
       const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
       console.log("[PATCH /api/transactions/:id] Transação atualizada:", updatedTransaction);
 

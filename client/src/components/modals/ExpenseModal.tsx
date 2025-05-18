@@ -118,6 +118,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
 
   // Handle file change
   const handleFileChange = (selectedFile: File | null) => {
+    console.log("Arquivo selecionado:", selectedFile?.name || "Nenhum");
     setFile(selectedFile);
   };
 
