@@ -13,6 +13,7 @@ export const apiRequest = async (method: string, url: string, data?: any) => {
     const options: any = {
       method,
       headers: {},
+      credentials: 'include' // Garantir que cookies de sessão sejam enviados
     };
 
     if (data) {
@@ -30,9 +31,24 @@ export const apiRequest = async (method: string, url: string, data?: any) => {
     const response = await fetch(url, options);
     console.log(`[API] Resposta recebida de ${url}, status: ${response.status}`);
 
-  const res = await response;
-  await throwIfResNotOk(res);
-  return res;
+    // Verificar se a resposta foi recebida
+    if (!response) {
+      throw new Error(`Não foi possível conectar ao servidor: ${url}`);
+    }
+    
+    // Se a resposta não for ok, tentar obter os detalhes do erro
+    if (!response.ok) {
+      let errorText = '';
+      try {
+        const errorData = await response.json();
+        errorText = errorData.message || response.statusText;
+      } catch {
+        errorText = await response.text() || response.statusText;
+      }
+      throw new Error(`Erro ${response.status}: ${errorText}`);
+    }
+
+    return response;
 } catch (error: any) {
     console.error(`[API] Erro na requisição ${method} para ${url}:`, error);
     throw error;

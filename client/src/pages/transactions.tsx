@@ -51,14 +51,23 @@ export default function Transactions({ userId }: TransactionsProps) {
   const [selectedAttachmentPath, setSelectedAttachmentPath] = useState('');
 
   // Fetch transactions
-  const { data: transactions, isLoading, isError, error } = useQuery({
+  const { data: transactions, isLoading, isError, error, refetch } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
     onSuccess: (data) => {
-      console.log(`[APP] Transações carregadas com sucesso:`, data);
+      console.log(`[APP] Transações carregadas com sucesso:`, data?.length || 0, 'transações encontradas');
     },
     onError: (err) => {
       console.error(`[APP] Erro ao carregar transações:`, err);
-    }
+      toast({
+        title: "Erro ao carregar transações",
+        description: String(err?.message || "Verifique sua conexão com o servidor"),
+        variant: "destructive",
+      });
+    },
+    // Recarregar transações a cada 30 segundos
+    refetchInterval: 30000,
+    retry: 3,
+    retryDelay: 1000
   });
 
   // Fetch categories

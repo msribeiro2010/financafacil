@@ -539,7 +539,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transaction routes
   app.get("/api/transactions/:userId", async (req, res) => {
     try {
+      // Verifica se o userId foi fornecido
+      if (!req.params.userId) {
+        console.error(`[GET /api/transactions/:userId] ID de usuário não fornecido`);
+        return res.status(400).json({ message: "ID de usuário não fornecido" });
+      }
+
       const userId = parseInt(req.params.userId);
+      
+      // Verificar se o userId é um número válido
+      if (isNaN(userId) || userId <= 0) {
+        console.error(`[GET /api/transactions/:userId] ID de usuário inválido: ${req.params.userId}`);
+        return res.status(400).json({ message: "ID de usuário inválido" });
+      }
+      
       console.log(`[GET /api/transactions/:userId] Buscando transações para usuário ${userId}`);
 
       // Atualizar status de transações vencidas primeiro
@@ -548,42 +561,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[GET /api/transactions/:userId] Atualizando status de transações vencidas (data atual: ${today})`);
       
-      // Atualizar transações vencidas
-      await pool.query(`
-        UPDATE transactions 
-        SET status = 'atrasada' 
-        WHERE user_id = $1 
-          AND type = 'expense'
-          AND date < $2
-          AND status = 'a_pagar'
-      `, [userId, today]);
-      
-      console.log(`[GET /api/transactions/:userId] Status de transações vencidas atualizado`);
+      try {
+        // Atualizar transações vencidas
+        await pool.query(`
+          UPDATE transactions 
+          SET status = 'atrasada' 
+          WHERE user_id = $1 
+            AND type = 'expense'
+            AND date < $2
+            AND status = 'a_pagar'
+        `, [userId, today]);
+        
+        console.log(`[GET /api/transactions/:userId] Status de transações vencidas atualizado`);
+      } catch (updateError) {
+        console.error(`[GET /api/transactions/:userId] Erro ao atualizar status de transações:`, updateError);
+        // Continuamos mesmo com erro na atualização de status
+      }
 
       // Buscar diretamente do banco para garantir que obteremos os dados
-      const result = await pool.query(`
-        SELECT t.*, c.name as category_name, c.icon as category_icon 
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1
-        ORDER BY t.date DESC
-      `, [userId]);
-      
-      // Transformar os dados para incluir a categoria como um objeto aninhado
-      const transactions = result.rows.map(row => ({
-        ...row,
-        category: row.category_name ? {
-          id: row.category_id,
-          name: row.category_name,
-          icon: row.category_icon
-        } : null
-      }));
+      try {
+        const result = await pool.query(`
+          SELECT t.*, c.name as category_name, c.icon as category_icon 
+          FROM transactions t
+          LEFT JOIN categories c ON t.category_id = c.id
+          WHERE t.user_id = $1
+          ORDER BY t.date DESC
+        `, [userId]);
+        
+        // Transformar os dados para incluir a categoria como um objeto aninhado
+        const transactions = result.rows.map(row => ({
+          ...row,
+          category: row.category_name ? {
+            id: row.category_id,
+            name: row.category_name,
+            icon: row.category_icon
+          } : null
+        }));
 
-      console.log(`[GET /api/transactions/:userId] Encontradas ${transactions.length} transações`);
-      res.json(transactions);
+        console.log(`[GET /api/transactions/:userId] Encontradas ${transactions.length} transações`);
+        return res.json(transactions);
+      } catch (queryError) {
+        console.error(`[GET /api/transactions/:userId] Erro na consulta SQL:`, queryError);
+        return res.status(500).json({ 
+          message: "Erro ao buscar transações do banco de dados",
+          error: queryError instanceof Error ? queryError.message : String(queryError)
+        });
+      }
     } catch (error) {
-      console.error(`[GET /api/transactions/:userId] Erro:`, error);
-      res.status(500).json({ message: "Erro ao buscar transações" });
+      console.error(`[GET /api/transactions/:userId] Erro geral:`, error);
+      res.status(500).json({ 
+        message: "Erro ao buscar transações",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
