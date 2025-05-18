@@ -413,7 +413,6 @@ export default function Transactions({ userId }: TransactionsProps) {
                                     const formData = new FormData();
                                     formData.append('status', newStatus);
                                     console.log("FormData criado com status:", newStatus);
-                                    formData.append('status', newStatus);
 
                                     console.log(`Enviando requisição para atualizar status da transação ${transaction.id} para ${newStatus}`);
                                     
@@ -422,7 +421,10 @@ export default function Transactions({ userId }: TransactionsProps) {
                                       console.log(`FormData contém: ${pair[0]}: ${pair[1]}`);
                                     }
                                     
-                                    apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
+                                    // Alternativa: usar JSON em vez de FormData
+                                    const jsonData = { status: newStatus };
+                                    
+                                    apiRequest('PATCH', `/api/transactions/${transaction.id}`, jsonData)
                                       .then(async (response) => {
                                         let responseData;
                                         try {
