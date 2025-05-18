@@ -353,8 +353,11 @@ export default function Transactions({ userId }: TransactionsProps) {
                                     size="icon"
                                     className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 mr-1"
                                     onClick={() => {
+                                      // Garantir que o caminho do anexo comece com / se não for um caminho completo
                                       const attachmentPath = transaction.attachment_path || transaction.attachment;
-                                      setSelectedAttachmentPath(attachmentPath);
+                                      const fullPath = attachmentPath.startsWith('/') ? attachmentPath : `/${attachmentPath}`;
+                                      console.log('Abrindo anexo:', fullPath);
+                                      setSelectedAttachmentPath(fullPath);
                                       setAttachmentViewerOpen(true);
                                     }}
                                     title="Visualizar anexo/boleto"

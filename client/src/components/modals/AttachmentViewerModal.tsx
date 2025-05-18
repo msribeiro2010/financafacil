@@ -14,14 +14,40 @@ export function AttachmentViewerModal({ isOpen, onClose, attachmentPath, title =
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   
-  const isPDF = attachmentPath.toLowerCase().endsWith('.pdf');
-  const fileName = attachmentPath.split('/').pop() || 'arquivo';
+  // Ao abrir o modal, resetar o estado
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsLoading(true);
+      setError(null);
+      console.log('Carregando anexo:', attachmentPath);
+    }
+  }, [isOpen, attachmentPath]);
+  
+  // Garantir que o caminho seja válido
+  const validPath = React.useMemo(() => {
+    if (!attachmentPath) return '';
+    
+    // Remover barras duplicadas
+    let path = attachmentPath.replace(/\/\//g, '/');
+    
+    // Garantir que o caminho comece com /
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+    
+    return path;
+  }, [attachmentPath]);
+  
+  const isPDF = validPath.toLowerCase().endsWith('.pdf');
+  const fileName = validPath.split('/').pop() || 'arquivo';
   
   const handleLoad = () => {
+    console.log('Anexo carregado com sucesso');
     setIsLoading(false);
   };
   
   const handleError = () => {
+    console.error('Erro ao carregar anexo:', validPath);
     setIsLoading(false);
     setError('Não foi possível carregar o anexo. Tente abrir em uma nova aba.');
   };
@@ -49,7 +75,7 @@ export function AttachmentViewerModal({ isOpen, onClose, attachmentPath, title =
           
           {isPDF ? (
             <object
-              data={attachmentPath}
+              data={validPath}
               type="application/pdf"
               width="100%"
               height="500px"
@@ -57,11 +83,11 @@ export function AttachmentViewerModal({ isOpen, onClose, attachmentPath, title =
               onError={handleError}
               className={isLoading ? 'hidden' : ''}
             >
-              <p>Seu navegador não suporta a visualização de PDFs. <a href={attachmentPath} target="_blank" rel="noopener noreferrer">Clique aqui para baixar</a></p>
+              <p>Seu navegador não suporta a visualização de PDFs. <a href={validPath} target="_blank" rel="noopener noreferrer">Clique aqui para baixar</a></p>
             </object>
           ) : (
             <img
-              src={attachmentPath}
+              src={validPath}
               alt="Anexo"
               className={`max-w-full max-h-[70vh] object-contain ${isLoading ? 'hidden' : ''}`}
               onLoad={handleLoad}
@@ -77,7 +103,7 @@ export function AttachmentViewerModal({ isOpen, onClose, attachmentPath, title =
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => window.open(attachmentPath, '_blank')}
+              onClick={() => window.open(validPath, '_blank')}
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Abrir em nova aba
@@ -86,7 +112,7 @@ export function AttachmentViewerModal({ isOpen, onClose, attachmentPath, title =
               variant="default"
               onClick={() => {
                 const link = document.createElement('a');
-                link.href = attachmentPath;
+                link.href = validPath;
                 link.download = fileName;
                 link.click();
               }}
