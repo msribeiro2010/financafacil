@@ -421,8 +421,11 @@ export default function Transactions({ userId }: TransactionsProps) {
                                       console.log(`FormData contém: ${pair[0]}: ${pair[1]}`);
                                     }
                                     
-                                    // Alternativa: usar JSON em vez de FormData
+                                    // Usar JSON para garantir o correto envio do status
                                     const jsonData = { status: newStatus };
+                                    
+                                    // Log para debugging
+                                    console.log(`Enviando status ${newStatus} como JSON:`, jsonData);
                                     
                                     apiRequest('PATCH', `/api/transactions/${transaction.id}`, jsonData)
                                       .then(async (response) => {

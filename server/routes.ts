@@ -753,10 +753,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validStatuses = ['paga', 'a_pagar', 'atrasada'];
         if (!validStatuses.includes(statusValue)) {
           console.error(`[PATCH /api/transactions/:id] Status inválido: "${statusValue}"`);
-          statusValue = 'a_pagar'; // Valor padrão em caso de erro
+          return res.status(400).json({ 
+            message: "Status inválido", 
+            details: `O status '${statusValue}' não é válido. Valores aceitos: paga, a_pagar, atrasada`,
+            receivedStatus: statusValue,
+            validOptions: validStatuses
+          });
         }
         
-        console.log(`[PATCH /api/transactions/:id] Status detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
+        console.log(`[PATCH /api/transactions/:id] Status válido detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
         
         // Adicionar diretamente à lista de campos a atualizar
         updateFields.push(`status = $${valueIndex}`);

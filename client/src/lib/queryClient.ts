@@ -42,6 +42,7 @@ export async function apiRequest(method: string, url: string, data?: any): Promi
         console.log(`FormData contém campo: ${pair[0]} = ${pair[1]}`);
       }
     } else {
+      // Garantir que o Content-Type seja application/json
       headers['Content-Type'] = 'application/json';
       body = JSON.stringify(data);
       console.log(`Enviando JSON para ${method} ${url}: ${body}`);
