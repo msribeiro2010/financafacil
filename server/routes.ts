@@ -742,7 +742,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Simplificar a lógica para atualizar o status
       if (req.body.status !== undefined) {
-        const statusValue = req.body.status;
+        let statusValue = req.body.status;
+        
+        // Corrigir se o status vier como array (isso acontece com alguns formatos de form data)
+        if (Array.isArray(statusValue)) {
+          statusValue = statusValue[0]; // Pegar o primeiro valor
+        }
         
         console.log(`[PATCH /api/transactions/:id] Status detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
         

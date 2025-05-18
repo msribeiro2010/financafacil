@@ -1,13 +1,19 @@
 
 // Script para adicionar a coluna status à tabela transactions
-import { pool, dbWithExtensions as db } from '../server/db';
+import { pool } from '../server/db';
 
 console.log('[SCRIPT] Verificando e adicionando coluna status à tabela transactions...');
 
 async function addStatusColumn() {
   try {
-    // Verificar se a coluna status já existe usando query direta
-    const tableInfoQuery = "SELECT column_name FROM information_schema.columns WHERE table_name = 'transactions' AND column_name = 'status'";
+    // Verificar se a coluna status já existe
+    const tableInfoQuery = `
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'transactions' 
+        AND column_name = 'status'
+    `;
+    
     const tableInfo = await pool.query(tableInfoQuery);
     
     console.log('[SCRIPT] Verificação da estrutura atual da tabela:', tableInfo.rows);
@@ -18,7 +24,7 @@ async function addStatusColumn() {
     if (!hasStatusColumn) {
       console.log('[SCRIPT] Coluna status não encontrada. Adicionando...');
       
-      // SQLite não tem "add column if not exists"
+      // Adicionar a coluna status
       await pool.query(`ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'a_pagar'`);
       console.log('[SCRIPT] Coluna status adicionada com sucesso!');
       
@@ -36,7 +42,7 @@ async function addStatusColumn() {
       );
       console.log('[SCRIPT] Despesas vencidas marcadas como atrasadas');
     } else {
-      console.log('[SCRIPT] A coluna status já existe.');
+      console.log('[SCRIPT] A coluna status já existe na tabela transactions');
     }
     
     // Verificar a estrutura atualizada
@@ -50,16 +56,17 @@ async function addStatusColumn() {
   }
 }
 
+// Executa a função principal
 addStatusColumn()
-  .then((success) => {
+  .then(success => {
     if (success) {
-      console.log('[SCRIPT] Script de adição de coluna status finalizado com sucesso!');
+      console.log('[SCRIPT] Script executado com sucesso!');
     } else {
       console.log('[SCRIPT] Script finalizado com erros. Verifique os logs acima.');
     }
     process.exit(0);
   })
-  .catch((err) => {
-    console.error('[SCRIPT] Erro crítico ao executar script:', err);
+  .catch(error => {
+    console.error('[SCRIPT] Erro fatal durante a execução do script:', error);
     process.exit(1);
   });
