@@ -407,8 +407,21 @@ export default function Transactions({ userId }: TransactionsProps) {
                                       }
                                     }
                                     
-                                    apiRequest('PATCH', `/api/transactions/${transaction.id}`, { status: newStatus })
-                                      .then(() => {
+                                    console.log(`Atualizando status da transação ${transaction.id} para ${newStatus}`);
+                                  
+                                  // Usar FormData para garantir compatibilidade com a API
+                                  const formData = new FormData();
+                                  formData.append('status', newStatus);
+                                  
+                                  apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
+                                      .then((response) => {
+                                        if (!response.ok) {
+                                          throw new Error('Falha na resposta da API');
+                                        }
+                                        return response.json();
+                                      })
+                                      .then((data) => {
+                                        console.log('Status atualizado com sucesso:', data);
                                         queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
                                         queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
                                         queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });

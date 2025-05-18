@@ -702,6 +702,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const transactionId = parseInt(req.params.id);
       console.log(`[PATCH /api/transactions/:id] Body para transação ${transactionId}:`, req.body);
+      console.log(`[PATCH /api/transactions/:id] Headers:`, req.headers);
+      console.log(`[PATCH /api/transactions/:id] Conteúdo do status:`, req.body.status);
       console.log(`[PATCH /api/transactions/:id] Arquivo enviado:`, req.file || "Nenhum");
 
       // Verificar se o ID é válido

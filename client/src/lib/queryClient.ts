@@ -8,52 +8,42 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export const apiRequest = async (method: string, url: string, data?: any) => {
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  };
+
+  if (data) {
+    if (data instanceof FormData) {
+      console.log("Enviando como FormData", method, url);
+      options.headers = {};  // Permitir que o navegador defina Content-Type com boundary
+      options.body = data;
+    } else if (typeof data === 'object') {
+      console.log("Enviando como JSON", method, url, data);
+      options.body = JSON.stringify(data);
+    } else {
+      console.log("Enviando como texto", method, url, data);
+      options.body = String(data);
+    }
+  }
+
   try {
-    console.log(`[API] Iniciando requisição ${method} para ${url}`);
-    const options: any = {
-      method,
-      headers: {},
-      credentials: 'include' // Garantir que cookies de sessão sejam enviados
-    };
-
-    if (data) {
-      if (data instanceof FormData) {
-        options.body = data;
-        console.log(`[API] Enviando dados como FormData para ${url}`);
-      } else {
-        options.headers["Content-Type"] = "application/json";
-        options.body = JSON.stringify(data);
-        console.log(`[API] Enviando dados como JSON para ${url}:`, data);
-      }
-    }
-
-    console.log(`[API] Executando fetch para ${url}`);
     const response = await fetch(url, options);
-    console.log(`[API] Resposta recebida de ${url}, status: ${response.status}`);
 
-    // Verificar se a resposta foi recebida
-    if (!response) {
-      throw new Error(`Não foi possível conectar ao servidor: ${url}`);
-    }
-    
-    // Se a resposta não for ok, tentar obter os detalhes do erro
+    // Log para depuração
     if (!response.ok) {
-      let errorText = '';
-      try {
-        const errorData = await response.json();
-        errorText = errorData.message || response.statusText;
-      } catch {
-        errorText = await response.text() || response.statusText;
-      }
-      throw new Error(`Erro ${response.status}: ${errorText}`);
+      console.error(`Erro na requisição ${method} ${url}:`, response.status, response.statusText);
     }
 
     return response;
-} catch (error: any) {
-    console.error(`[API] Erro na requisição ${method} para ${url}:`, error);
+  } catch (error) {
+    console.error(`Falha na requisição ${method} ${url}:`, error);
     throw error;
   }
-};
+}
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
