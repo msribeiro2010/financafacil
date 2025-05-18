@@ -412,6 +412,8 @@ export default function Transactions({ userId }: TransactionsProps) {
                                     // Create FormData object for compatibility with the API
                                     const formData = new FormData();
                                     formData.append('status', newStatus);
+                                    console.log("FormData criado com status:", newStatus);
+                                    formData.append('status', newStatus);
 
                                     apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
                                       .then((response) => {

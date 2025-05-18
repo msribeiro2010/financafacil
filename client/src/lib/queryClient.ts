@@ -1,74 +1,99 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
+import { QueryClient } from "@tanstack/react-query";
 
-export const apiRequest = async (
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  endpoint: string,
-  data?: any
-) => {
-  const url = `${endpoint}`;
-
-  const options: RequestInit = {
-    method,
-    headers: {
-      'Accept': 'application/json',
-    },
-    credentials: 'include',
-  };
-
-  // Se não for FormData, adiciona o header Content-Type
-  if (data && !(data instanceof FormData)) {
-    options.headers = {
-      ...options.headers,
-      'Content-Type': 'application/json',
-    };
-    options.body = JSON.stringify(data);
-  } else if (data instanceof FormData) {
-    // Remove o Content-Type para o browser definir automaticamente com o boundary correto
-    options.body = data;
-    console.log(`Sending as FormData`, method, endpoint);
-  }
-
-  console.log(`Enviando requisição ${method} para ${url}`);
-
-  return fetch(url, options);
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
-
+// Create a client
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      queryFn: async ({ queryKey }) => {
+        const [url] = queryKey as [string];
+        
+        try {
+          console.log(`Fetching data from ${url}`);
+          const response = await fetch(url, {
+            credentials: 'include',
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+          }
+          
+          return response.json();
+        } catch (error) {
+          console.error(`Error fetching ${url}:`, error);
+          throw error;
+        }
+      },
     },
-    mutations: {
-      retry: false,
-    },
-  },
+  }
 });
+
+export const apiRequest = async (
+  method: string, 
+  url: string, 
+  data?: any
+): Promise<Response> => {
+  const options: RequestInit = {
+    method,
+    credentials: 'include',
+    headers: {}
+  };
+
+  if (data) {
+    if (data instanceof FormData) {
+      // FormData: não definir Content-Type para que o navegador defina com boundary correto
+      console.log(`Enviando FormData para ${method} ${url}`);
+      options.body = data;
+    } else {
+      // JSON: definir Content-Type adequado
+      console.log(`Enviando JSON para ${method} ${url}`, data);
+      options.headers = {
+        ...options.headers,
+        'Content-Type': 'application/json',
+      };
+      options.body = JSON.stringify(data);
+    }
+  }
+
+  try {
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      console.error(`Erro na requisição ${method} ${url}:`, response.status, response.statusText);
+    } else {
+      console.log(`Requisição ${method} ${url} bem-sucedida:`, response.status);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`Falha na requisição ${method} ${url}:`, error);
+    throw error;
+  }
+}
+
+type UnauthorizedBehavior = "returnNull" | "throw";
+
+export async function apiQueryWithAuth(
+  userId: number,
+  endpoint: string,
+  options: { on401?: UnauthorizedBehavior } = {}
+) {
+  const { on401 = "throw" } = options;
+  try {
+    const response = await fetch(endpoint);
+
+    if (response.status === 401) {
+      if (on401 === "returnNull") {
+        console.log(`401 Unauthorized accessing ${endpoint}, returning null`);
+        return null;
+      } else {
+        throw new Error(`401 Unauthorized accessing ${endpoint}`);
+      }
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching ${endpoint}:`, error);
+    throw error;
+  }
+}

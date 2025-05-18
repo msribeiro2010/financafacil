@@ -181,6 +181,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                               // Create FormData object for compatibility with the API
                               const formData = new FormData();
                               formData.append('status', newStatus);
+                              console.log(`UpcomingBills: FormData criado com status: ${newStatus} para transação ${bill.id}`);
                               
                               apiRequest('PATCH', `/api/transactions/${bill.id}`, formData)
                                 .then(() => {
