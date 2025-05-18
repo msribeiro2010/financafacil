@@ -1,36 +1,37 @@
 
 // Script para adicionar a coluna status à tabela transactions
-import { pool, db } from '../server/db';
+import { pool, dbWithExtensions as db } from '../server/db';
 
 console.log('[SCRIPT] Verificando e adicionando coluna status à tabela transactions...');
 
 async function addStatusColumn() {
   try {
-    // Verificar estrutura atual da tabela transactions
-    const tableInfoQuery = "PRAGMA table_info(transactions)";
-    const tableInfo = await db.run(tableInfoQuery);
-    console.log('[SCRIPT] Estrutura atual da tabela:', tableInfo);
+    // Verificar se a coluna status já existe usando query direta
+    const tableInfoQuery = "SELECT column_name FROM information_schema.columns WHERE table_name = 'transactions' AND column_name = 'status'";
+    const tableInfo = await pool.query(tableInfoQuery);
+    
+    console.log('[SCRIPT] Verificação da estrutura atual da tabela:', tableInfo.rows);
     
     // Verificar se a coluna status já existe
-    const hasStatusColumn = tableInfo.some((column: any) => column.name === 'status');
+    const hasStatusColumn = tableInfo.rows.length > 0;
     
     if (!hasStatusColumn) {
       console.log('[SCRIPT] Coluna status não encontrada. Adicionando...');
       
       // SQLite não tem "add column if not exists"
-      await db.run(`ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'a_pagar'`);
+      await pool.query(`ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'a_pagar'`);
       console.log('[SCRIPT] Coluna status adicionada com sucesso!');
       
       // Atualizar valores iniciais
       // Marcar receitas como pagas por padrão
-      await db.run(`UPDATE transactions SET status = 'paga' WHERE type = 'income'`);
+      await pool.query(`UPDATE transactions SET status = 'paga' WHERE type = 'income'`);
       console.log('[SCRIPT] Receitas marcadas como pagas');
       
       // Marcar despesas vencidas como atrasadas
       const today = new Date().toISOString().split('T')[0];
-      await db.run(
+      await pool.query(
         `UPDATE transactions SET status = 'atrasada' 
-         WHERE type = 'expense' AND date < ? AND (status = 'a_pagar' OR status IS NULL)`,
+         WHERE type = 'expense' AND date < $1 AND (status = 'a_pagar' OR status IS NULL)`,
         [today]
       );
       console.log('[SCRIPT] Despesas vencidas marcadas como atrasadas');
@@ -39,8 +40,8 @@ async function addStatusColumn() {
     }
     
     // Verificar a estrutura atualizada
-    const updatedTableInfo = await db.run(tableInfoQuery);
-    console.log('[SCRIPT] Estrutura final da tabela:', updatedTableInfo);
+    const updatedTableInfo = await pool.query(tableInfoQuery);
+    console.log('[SCRIPT] Estrutura final da tabela:', updatedTableInfo.rows);
     
     return true;
   } catch (error) {
