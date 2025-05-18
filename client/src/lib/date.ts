@@ -9,7 +9,16 @@ import { ptBR } from 'date-fns/locale';
  */
 export function formatDate(date: string | Date, formatStr = 'dd MMM yyyy'): string {
   try {
-    const dateObject = typeof date === 'string' ? parseISO(date) : date;
+    let dateObject;
+    
+    if (typeof date === 'string') {
+      // Ajusta o fuso horário para manter a data informada
+      // Adiciona 'T12:00:00' para evitar problemas com fusos horários
+      const formattedDateStr = date.includes('T') ? date : `${date}T12:00:00`;
+      dateObject = parseISO(formattedDateStr);
+    } else {
+      dateObject = date;
+    }
     
     if (!isValid(dateObject)) {
       return 'Data inválida';
