@@ -633,7 +633,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/transactions/:id", upload.single("attachment"), async (req, res) => {
     try {
       const transactionId = parseInt(req.params.id);
-      console.log(`PATCH /api/transactions/${transactionId} Body:`, req.body);
+      console.log(`[PATCH /api/transactions/:id] Body para transação ${transactionId}:`, req.body);
+
+      // Verificar se o ID é válido
+      if (isNaN(transactionId) || transactionId <= 0) {
+        return res.status(400).json({ message: "ID de transação inválido" });
+      }
 
       // Get existing transaction
       const existingTransaction = await storage.getTransactionById(transactionId);
@@ -641,28 +646,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Transação não encontrada" });
       }
 
+      console.log(`[PATCH /api/transactions/:id] Transação existente:`, existingTransaction);
+
       // Prepare update data
-      const updateData = { ...req.body };
-      if (updateData.userId) updateData.userId = parseInt(updateData.userId);
-      if (updateData.categoryId) updateData.categoryId = parseInt(updateData.categoryId);
-      if (updateData.recurringId) updateData.recurringId = parseInt(updateData.recurringId);
+      const updateData: any = {};
+      
+      // Copiar apenas os campos presentes na requisição
+      if (req.body.userId !== undefined) updateData.userId = parseInt(req.body.userId);
+      if (req.body.description !== undefined) updateData.description = req.body.description;
+      if (req.body.amount !== undefined) {
+        // Garantir que o valor seja tratado corretamente
+        let amount = req.body.amount;
+        if (typeof amount === 'string') {
+          // Remover caracteres não numéricos, exceto ponto e vírgula
+          amount = amount.replace(/[^\d.,]/g, '');
+          // Substituir vírgula por ponto
+          amount = amount.replace(',', '.');
+        }
+        
+        // Validar se é um número válido
+        if (!isNaN(parseFloat(amount))) {
+          updateData.amount = amount;
+          console.log(`[PATCH /api/transactions/:id] Valor tratado: ${amount}`);
+        } else {
+          return res.status(400).json({ 
+            message: "Valor inválido para a transação", 
+            receivedValue: req.body.amount 
+          });
+        }
+      }
+      
+      if (req.body.date !== undefined) updateData.date = req.body.date;
+      if (req.body.type !== undefined) updateData.type = req.body.type;
+      if (req.body.categoryId !== undefined) updateData.categoryId = parseInt(req.body.categoryId);
+      if (req.body.isRecurring !== undefined) updateData.isRecurring = req.body.isRecurring;
+      if (req.body.recurringId !== undefined) updateData.recurringId = parseInt(req.body.recurringId);
 
       // Handle the new attachment if present
       if (req.file) {
         updateData.attachmentPath = `/uploads/${req.file.filename}`;
-      } else if (updateData.removeAttachment === 'true') {
+        console.log(`[PATCH /api/transactions/:id] Novo anexo: ${updateData.attachmentPath}`);
+      } else if (req.body.removeAttachment === 'true') {
         // Remove attachment if explicitly requested
         updateData.attachmentPath = null;
+        console.log(`[PATCH /api/transactions/:id] Removendo anexo`);
       }
 
-      console.log("Update data:", updateData);
+      console.log("[PATCH /api/transactions/:id] Dados para atualização:", updateData);
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "Nenhum dado fornecido para atualização" });
+      }
 
       const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
-      console.log("Updated transaction:", updatedTransaction);
+      console.log("[PATCH /api/transactions/:id] Transação atualizada:", updatedTransaction);
 
       res.json(updatedTransaction);
     } catch (error) {
-      console.error("Error updating transaction:", error);
+      console.error("[PATCH /api/transactions/:id] Erro:", error);
       res.status(500).json({
         message: "Erro ao atualizar transação",
         error: error instanceof Error ? error.message : String(error),

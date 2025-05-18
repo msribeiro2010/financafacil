@@ -211,6 +211,14 @@ export class DatabaseStorage implements IStorage {
       // Construir a query de atualização dinamicamente
       const { pool } = await import('./db');
       
+      // Verificar se a transação existe antes de atualizar
+      const existingTransaction = await this.getTransactionById(id);
+      if (!existingTransaction) {
+        throw new Error(`Transação com ID ${id} não encontrada`);
+      }
+      
+      console.log(`[Storage] Transação existente:`, existingTransaction);
+      
       // Construir conjunto de campos para atualizar
       const updateFields: string[] = [];
       const values: any[] = [];
@@ -228,9 +236,23 @@ export class DatabaseStorage implements IStorage {
       
       if (transaction.amount !== undefined) {
         updateFields.push(`amount = $${paramCounter++}`);
-        // Garantir que amount seja tratado como um número ou string numérica válida
-        const amount = typeof transaction.amount === 'string' ? 
-          transaction.amount.replace(',', '.') : transaction.amount;
+        // Tratamento robusto para o campo amount
+        let amount;
+        if (typeof transaction.amount === 'string') {
+          // Remover todos os caracteres não numéricos, exceto ponto e vírgula
+          const cleanedAmount = transaction.amount.replace(/[^\d.,]/g, '');
+          // Substituir vírgula por ponto para garantir formato numérico válido
+          amount = cleanedAmount.replace(',', '.');
+        } else {
+          amount = transaction.amount;
+        }
+        
+        // Validar se é um número válido
+        if (isNaN(parseFloat(String(amount)))) {
+          console.error(`[Storage] Valor inválido para amount: ${amount}`);
+          throw new Error(`Valor inválido: ${amount}`);
+        }
+        
         values.push(amount);
         console.log(`[Storage] Atualizando amount para: ${amount} (tipo: ${typeof amount})`);
       }
@@ -267,7 +289,7 @@ export class DatabaseStorage implements IStorage {
       
       // Se não há campos para atualizar, retorna erro
       if (updateFields.length === 0) {
-        throw new Error("No fields to update");
+        throw new Error("Nenhum campo para atualizar");
       }
       
       // Adicionar ID da transação aos parâmetros
@@ -275,17 +297,23 @@ export class DatabaseStorage implements IStorage {
       
       // Executar a query
       console.log(`[Storage] Executando query de atualização: UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter}`);
-      const result = await pool.query(
-        `UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
-        values
-      );
       
-      if (result.rows.length === 0) {
-        throw new Error("Transaction not found");
+      try {
+        const result = await pool.query(
+          `UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+          values
+        );
+        
+        if (result.rows.length === 0) {
+          throw new Error("Transação não encontrada");
+        }
+        
+        console.log(`[Storage] Transação atualizada com sucesso:`, result.rows[0]);
+        return result.rows[0];
+      } catch (dbError) {
+        console.error(`[Storage] Erro no banco de dados ao atualizar transação ${id}:`, dbError);
+        throw new Error(`Erro no banco de dados: ${dbError.message}`);
       }
-      
-      console.log(`[Storage] Transação atualizada com sucesso:`, result.rows[0]);
-      return result.rows[0];
     } catch (error) {
       console.error(`[Storage] Erro ao atualizar transação ${id}:`, error);
       throw error;

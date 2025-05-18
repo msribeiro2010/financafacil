@@ -83,14 +83,14 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   useEffect(() => {
     if (transaction) {
       console.log("Editando transação:", transaction);
-      
+
       // Garantir que valores estejam no formato correto
       const formattedAmount = typeof transaction.amount === 'number' 
         ? transaction.amount.toFixed(2) 
         : transaction.amount || '';
-        
+
       const categoryIdStr = transaction.categoryId?.toString() || '';
-      
+
       form.reset({
         description: transaction.description || '',
         amount: formattedAmount,
@@ -177,7 +177,7 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Obter o valor da despesa do formulário
     const expenseAmount = parseFloat(values.amount || '0');
-    
+
     // Verificar se a despesa não ultrapassa o saldo + limite de cheque especial
       if (userData && financialSummary) {
         const currentBalance = financialSummary.currentBalance;
@@ -248,6 +248,13 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
     Object.entries(values).forEach(([key, value]) => {
       if (key === 'isRecurring') {
         formData.append(key, value.toString());
+      } else if (key === 'amount' && value !== undefined && value !== null && value !== '') {
+        // Garantir que o valor seja formatado corretamente
+        const formattedAmount = typeof value === 'string' 
+          ? value.replace(',', '.') 
+          : value.toString();
+        formData.append(key, formattedAmount);
+        console.log(`Valor formatado para envio: ${formattedAmount}`);
       } else if (value !== undefined && value !== null && value !== '') {
         formData.append(key, value.toString());
       }
