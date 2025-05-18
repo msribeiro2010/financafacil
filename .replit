@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Iniciar Aplicação"
+runButton = "Start Clean"
 
 [[workflows.workflow]]
 name = "Project"
@@ -61,3 +61,20 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=production node dist/server/index.js"
+
+[[workflows.workflow]]
+name = "Start Clean"
+author = 41931751
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"server/index.ts\" || echo \"No server process running\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "kill -9 $(lsof -t -i:5000) 2>/dev/null || echo \"No process running on port 5000\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
