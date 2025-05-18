@@ -451,7 +451,6 @@ export default function Transactions({ userId }: TransactionsProps) {
                                         }
                                         
                                         return responseData;
-                                      }
                                       })
                                       .then((data) => {
                                         console.log('Status atualizado com sucesso:', data);
