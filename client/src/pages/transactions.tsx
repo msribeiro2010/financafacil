@@ -341,8 +341,48 @@ export default function Transactions({ userId }: TransactionsProps) {
                             <td className="py-3 px-4">
                               {formatDate(transaction.date)}
                             </td>
+                            <td className="py-3 px-4">
+                              {transaction.type === 'expense' && (
+                                <Button
+                                  variant={transaction.status === 'paga' ? 'outline' : 'default'}
+                                  size="sm"
+                                  className={`text-xs ${
+                                    transaction.status === 'paga' 
+                                      ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' 
+                                      : transaction.status === 'atrasada'
+                                        ? 'bg-red-500 text-white hover:bg-red-600'
+                                        : 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'
+                                  }`}
+                                  onClick={() => {
+                                    const newStatus = transaction.status === 'paga' ? 'a_pagar' : 'paga';
+                                    apiRequest('PATCH', `/api/transactions/${transaction.id}`, { status: newStatus })
+                                      .then(() => {
+                                        queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
+                                        queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
+                                        queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+                                        toast({
+                                          title: `Conta marcada como ${newStatus === 'paga' ? 'paga' : 'a pagar'}`,
+                                          description: "Status atualizado com sucesso.",
+                                        });
+                                      })
+                                      .catch((error) => {
+                                        console.error('Erro ao atualizar status:', error);
+                                        toast({
+                                          title: "Erro",
+                                          description: "Não foi possível atualizar o status.",
+                                          variant: "destructive",
+                                        });
+                                      });
+                                  }}
+                                >
+                                  {transaction.status === 'paga' ? 'Paga' : transaction.status === 'atrasada' ? 'Atrasada' : 'A Pagar'}
+                                </Button>
+                              )}
+                            </td>
                             <td className="py-3 px-4 text-right font-medium">
-                              <span className={transaction.type === 'expense' ? 'text-destructive' : 'text-accent'}>
+                              <span className={`${transaction.type === 'expense' 
+                                ? (transaction.status === 'paga' ? 'text-slate-500 line-through' : 'text-destructive') 
+                                : 'text-accent'}`}>
                                 {transaction.type === 'expense' ? '- ' : '+ '}
                                 {formatCurrency(parseFloat(transaction.amount))}
                               </span>

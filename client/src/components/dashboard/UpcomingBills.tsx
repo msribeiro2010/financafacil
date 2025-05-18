@@ -56,7 +56,15 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
     }
   });
   
-  const getDueDateLabel = (date: string) => {
+  const getDueDateLabel = (date: string, status: string) => {
+    // Se já está paga, mostramos essa informação independente da data
+    if (status === 'paga') {
+      return {
+        label: "Paga",
+        className: "bg-green-100 text-green-800"
+      };
+    }
+    
     const dueDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -64,20 +72,34 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
+    // Verifica se está atrasada
+    if (status === 'atrasada') {
+      return {
+        label: "Atrasada",
+        className: "bg-red-500 text-white"
+      };
+    }
+    
     if (diffDays === 0) {
       return {
         label: "Vence hoje",
-        className: "bg-red-100 text-red-800"
+        className: "bg-red-100 text-red-800 font-bold"
       };
     } else if (diffDays === 1) {
       return {
         label: "Vence amanhã",
-        className: "bg-amber-100 text-amber-800"
+        className: "bg-amber-100 text-amber-800 font-bold"
       };
     } else if (diffDays > 1 && diffDays <= 3) {
       return {
         label: `Em ${diffDays} dias`,
         className: "bg-amber-100 text-amber-800"
+      };
+    } else if (diffDays < 0) {
+      // Para contas com data passada mas que não foram marcadas como atrasadas no banco
+      return {
+        label: `Atrasada ${Math.abs(diffDays)} dias`,
+        className: "bg-red-500 text-white"
       };
     } else {
       return {
@@ -118,7 +140,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                 </thead>
                 <tbody>
                   {upcomingBills.map((bill: any) => {
-                    const dueDate = getDueDateLabel(bill.date);
+                    const dueDate = getDueDateLabel(bill.date, bill.status);
                     
                     return (
                       <tr key={bill.id} className="border-b border-slate-100 hover:bg-slate-50">
@@ -148,9 +170,11 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                   : 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'
                             }`}
                             onClick={() => {
+                              console.log(`Alterando status da conta ID ${bill.id} de "${bill.status}" para "${bill.status === 'paga' ? 'a_pagar' : 'paga'}"`);
                               const newStatus = bill.status === 'paga' ? 'a_pagar' : 'paga';
                               apiRequest('PATCH', `/api/transactions/${bill.id}`, { status: newStatus })
                                 .then(() => {
+                                  console.log('Status atualizado com sucesso');
                                   queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
                                   queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
                                   queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
@@ -159,7 +183,8 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                     description: "Status atualizado com sucesso.",
                                   });
                                 })
-                                .catch(() => {
+                                .catch((error) => {
+                                  console.error('Erro ao atualizar status:', error);
                                   toast({
                                     title: "Erro",
                                     description: "Não foi possível atualizar o status.",

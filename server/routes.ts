@@ -686,7 +686,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.categoryId !== undefined) updateData.categoryId = parseInt(req.body.categoryId);
       if (req.body.isRecurring !== undefined) updateData.isRecurring = req.body.isRecurring === 'true' || req.body.isRecurring === true;
       if (req.body.recurringId !== undefined) updateData.recurringId = parseInt(req.body.recurringId) || null;
-      if (req.body.status !== undefined) updateData.status = req.body.status;
+      if (req.body.status !== undefined) {
+        updateData.status = req.body.status;
+        console.log(`[PATCH /api/transactions/:id] Atualizando status para: ${req.body.status}`);
+      }
 
       // Handle the new attachment if present
       if (req.file) {
