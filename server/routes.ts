@@ -703,7 +703,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transactionId = parseInt(req.params.id);
       console.log(`[PATCH /api/transactions/:id] Body para transação ${transactionId}:`, req.body);
       console.log(`[PATCH /api/transactions/:id] Headers:`, req.headers);
-      console.log(`[PATCH /api/transactions/:id] Conteúdo do status:`, req.body.status);
+      
+      // Log melhorado para depuração do status
+      if (req.body.status !== undefined) {
+        console.log(`[PATCH /api/transactions/:id] Status encontrado: "${req.body.status}" (tipo: ${typeof req.body.status})`);
+      } else {
+        console.log(`[PATCH /api/transactions/:id] Status não encontrado no req.body`);
+        // Tentar encontrar em outras propriedades do request
+        console.log(`[PATCH /api/transactions/:id] Keys disponíveis no body:`, Object.keys(req.body));
+      }
+      
       console.log(`[PATCH /api/transactions/:id] Tipo de Content-Type:`, req.headers['content-type']);
       console.log(`[PATCH /api/transactions/:id] Arquivo enviado:`, req.file || "Nenhum");
 
@@ -731,12 +740,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let valueIndex = 1;
       const updateData: Record<string, any> = {};
 
-      // Verificar explicitamente o status primeiro
+      // Verificar explicitamente o status primeiro - processando corretamente o FormData
       if (req.body.status !== undefined) {
+        // Se o status estiver presente no corpo da requisição, usá-lo
+        const statusValue = req.body.status;
         updateFields.push(`status = $${valueIndex}`);
-        updateValues.push(req.body.status);
-        updateData.status = req.body.status;
-        console.log(`[PATCH /api/transactions/:id] Status detectado: "${req.body.status}"`);
+        updateValues.push(statusValue);
+        updateData.status = statusValue;
+        console.log(`[PATCH /api/transactions/:id] Status detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
         valueIndex++;
       }
 

@@ -43,6 +43,12 @@ export const apiRequest = async (
     if (data instanceof FormData) {
       // FormData: não definir Content-Type para que o navegador defina com boundary correto
       console.log(`Enviando FormData para ${method} ${url}`);
+      
+      // Log para depuração: ver conteúdo do FormData
+      for (const pair of data.entries()) {
+        console.log(`FormData contém campo: ${pair[0]} = ${pair[1]}`);
+      }
+      
       options.body = data;
     } else {
       // JSON: definir Content-Type adequado
@@ -56,10 +62,21 @@ export const apiRequest = async (
   }
 
   try {
+    console.log(`Iniciando requisição ${method} para ${url}`);
     const response = await fetch(url, options);
+    
+    // Log detalhado da resposta
+    console.log(`Resposta ${method} ${url}: status=${response.status}`);
     
     if (!response.ok) {
       console.error(`Erro na requisição ${method} ${url}:`, response.status, response.statusText);
+      try {
+        // Tentar ler o corpo da resposta para diagnóstico
+        const errorText = await response.text();
+        console.error(`Corpo da resposta de erro:`, errorText);
+      } catch (readError) {
+        console.error(`Não foi possível ler o corpo da resposta de erro:`, readError);
+      }
     } else {
       console.log(`Requisição ${method} ${url} bem-sucedida:`, response.status);
     }
