@@ -163,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API routes
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "funcionando" });
   });
 
   // User routes
@@ -428,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/session", async (req, res) => {
     try {
       if (!req.session || !req.session.userId) {
-        return res.status(401).json({ message: "Não autenticado" });
+        return res.status(401).json({ message: "Não autenticado. Por favor, faça login novamente." });
       }
 
       const userId = req.session.userId;
@@ -628,9 +628,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(201).json(result.rows[0]);
       }
     } catch (error) {
-      console.error("Error creating transaction:", error);
+      console.error("Erro ao criar transação:", error);
       res.status(500).json({
-        message: "Erro ao criar transação",
+        message: "Erro ao criar transação. Por favor, verifique os dados e tente novamente.",
         error: error instanceof Error ? error.message : String(error),
       });
     }
