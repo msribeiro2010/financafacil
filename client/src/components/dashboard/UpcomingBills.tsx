@@ -178,7 +178,11 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                 return;
                               }
                               
-                              apiRequest('PATCH', `/api/transactions/${bill.id}`, { status: newStatus })
+                              // Create FormData object for compatibility with the API
+                              const formData = new FormData();
+                              formData.append('status', newStatus);
+                              
+                              apiRequest('PATCH', `/api/transactions/${bill.id}`, formData)
                                 .then(() => {
                                   console.log('Status atualizado com sucesso');
                                   queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });

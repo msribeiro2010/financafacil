@@ -77,7 +77,7 @@ export default function Transactions({ userId }: TransactionsProps) {
       console.log(`[APP] Categorias carregadas com sucesso:`, data);
     }
   });
-  
+
   // Se há erro, mostrar na UI
   React.useEffect(() => {
     if (isError) {
@@ -399,21 +399,21 @@ export default function Transactions({ userId }: TransactionsProps) {
                                   }`}
                                   onClick={() => {
                                     const newStatus = transaction.status === 'paga' ? 'a_pagar' : 'paga';
-                                    
+
                                     // Mostrar alerta de confirmação se estiver desmarcando como paga
                                     if (transaction.status === 'paga') {
                                       if (!window.confirm(`Tem certeza que deseja desmarcar "${transaction.description}" como não paga?`)) {
                                         return;
                                       }
                                     }
-                                    
+
                                     console.log(`Atualizando status da transação ${transaction.id} para ${newStatus}`);
-                                  
-                                  // Usar FormData para garantir compatibilidade com a API
-                                  const formData = new FormData();
-                                  formData.append('status', newStatus);
-                                  
-                                  apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
+
+                                    // Create FormData object for compatibility with the API
+                                    const formData = new FormData();
+                                    formData.append('status', newStatus);
+
+                                    apiRequest('PATCH', `/api/transactions/${transaction.id}`, formData)
                                       .then((response) => {
                                         if (!response.ok) {
                                           throw new Error('Falha na resposta da API');
@@ -733,8 +733,7 @@ export default function Transactions({ userId }: TransactionsProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AttachmentViewerModal
-        isOpen={attachmentViewerOpen}
+      <AttachmentViewerModal        isOpen={attachmentViewerOpen}
         onClose={() => setAttachmentViewerOpen(false)}
         attachmentPath={selectedAttachmentPath}
         title="Visualizar Anexo"
