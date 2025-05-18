@@ -216,7 +216,11 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                     throw new Error(`UpcomingBills - Falha na resposta da API: ${response.status}`);
                                   }
                                   
-                                  return responseData;tatus}): ${responseText}`);
+                                  return responseData;
+                } catch (error) {
+                  console.error(`Erro ao atualizar status: ${error}`);
+                }
+              };
 
                                   if (!response.ok) {
                                     throw new Error(`Falha na resposta da API: ${response.status} - ${responseText}`);
