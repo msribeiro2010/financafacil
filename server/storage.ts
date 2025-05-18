@@ -207,33 +207,33 @@ export class DatabaseStorage implements IStorage {
   async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
     try {
       console.log(`[Storage] Atualizando transação ${id} com:`, transaction);
-      
+
       // Construir a query de atualização dinamicamente
       const { pool } = await import('./db');
-      
+
       // Verificar se a transação existe antes de atualizar
       const existingTransaction = await this.getTransactionById(id);
       if (!existingTransaction) {
         throw new Error(`Transação com ID ${id} não encontrada`);
       }
-      
+
       console.log(`[Storage] Transação existente:`, existingTransaction);
-      
+
       // Construir conjunto de campos para atualizar
       const updateFields: string[] = [];
       const values: any[] = [];
       let paramCounter = 1;
-      
+
       if (transaction.userId !== undefined) {
         updateFields.push(`user_id = $${paramCounter++}`);
         values.push(transaction.userId);
       }
-      
+
       if (transaction.description !== undefined) {
         updateFields.push(`description = $${paramCounter++}`);
         values.push(transaction.description);
       }
-      
+
       if (transaction.amount !== undefined) {
         updateFields.push(`amount = $${paramCounter++}`);
         // Tratamento robusto para o campo amount
@@ -246,32 +246,32 @@ export class DatabaseStorage implements IStorage {
         } else {
           amount = transaction.amount;
         }
-        
+
         // Validar se é um número válido
         if (isNaN(parseFloat(String(amount)))) {
           console.error(`[Storage] Valor inválido para amount: ${amount}`);
           throw new Error(`Valor inválido: ${amount}`);
         }
-        
+
         values.push(amount);
         console.log(`[Storage] Atualizando amount para: ${amount} (tipo: ${typeof amount})`);
       }
-      
+
       if (transaction.date !== undefined) {
         updateFields.push(`date = $${paramCounter++}`);
         values.push(transaction.date);
       }
-      
+
       if (transaction.type !== undefined) {
         updateFields.push(`type = $${paramCounter++}`);
         values.push(transaction.type);
       }
-      
+
       if (transaction.categoryId !== undefined) {
         updateFields.push(`category_id = $${paramCounter++}`);
         values.push(transaction.categoryId);
       }
-      
+
       // Verificar o nome correto da coluna de anexo
       try {
         const columnResult = await pool.query(`
@@ -280,10 +280,10 @@ export class DatabaseStorage implements IStorage {
           WHERE table_name = 'transactions' 
           AND (column_name = 'attachment_path' OR column_name = 'attachment')
         `);
-        
+
         const attachmentColumn = columnResult.rows.length > 0 ? columnResult.rows[0].column_name : 'attachment_path';
         console.log(`[Storage] Nome da coluna de anexo identificado: ${attachmentColumn}`);
-        
+
         if (transaction.attachmentPath !== undefined) {
           updateFields.push(`${attachmentColumn} = $${paramCounter++}`);
           values.push(transaction.attachmentPath);
@@ -297,38 +297,38 @@ export class DatabaseStorage implements IStorage {
           values.push(transaction.attachmentPath);
         }
       }
-      
+
       if (transaction.isRecurring !== undefined) {
         updateFields.push(`is_recurring = $${paramCounter++}`);
         values.push(transaction.isRecurring === 'true' || transaction.isRecurring === true);
       }
-      
+
       if (transaction.recurringId !== undefined) {
         updateFields.push(`recurring_id = $${paramCounter++}`);
         values.push(transaction.recurringId);
       }
-      
+
       // Se não há campos para atualizar, retorna erro
       if (updateFields.length === 0) {
         throw new Error("Nenhum campo para atualizar");
       }
-      
+
       // Adicionar ID da transação aos parâmetros
       values.push(id);
-      
+
       // Executar a query
       console.log(`[Storage] Executando query de atualização: UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter}`);
-      
+
       try {
         const result = await pool.query(
           `UPDATE transactions SET ${updateFields.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
           values
         );
-        
+
         if (result.rows.length === 0) {
           throw new Error("Transação não encontrada");
         }
-        
+
         console.log(`[Storage] Transação atualizada com sucesso:`, result.rows[0]);
         return result.rows[0];
       } catch (dbError) {
@@ -344,18 +344,18 @@ export class DatabaseStorage implements IStorage {
   async deleteTransaction(id: number): Promise<boolean> {
     try {
       console.log(`[Storage] Solicitada exclusão da transação ${id}`);
-      
+
       // Primeiro verificamos se a transação existe
       const transaction = await this.getTransactionById(id);
       if (!transaction) {
         console.log(`[Storage] Transação ${id} não encontrada na pré-verificação`);
         return false;
       }
-      
+
       // Utilizamos diretamente a pool para a exclusão
       const { pool } = await import('./db');
       const result = await pool.query('DELETE FROM transactions WHERE id = $1 RETURNING id', [id]);
-      
+
       const success = result.rows && result.rows.length > 0;
       console.log(`[Storage] Resultado da exclusão da transação ${id}: ${success ? 'SUCESSO' : 'FALHA'}`);
       return success;
@@ -614,23 +614,67 @@ export class DatabaseStorage implements IStorage {
     return result.sort((a, b) => b.total - a.total);
   }
 
-  async getUpcomingBills(userId: number): Promise<Transaction[]> {
-    const today = new Date();
-    const thirtyDaysLater = new Date();
-    thirtyDaysLater.setDate(today.getDate() + 30);
+  async getUpcomingBills(userId: number) {
+    try {
+      const { pool } = await import('./db');
+      const today = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + 15); // Próximos 15 dias
 
-    // Usar a função do dbWithExtensions em vez do método da classe
-    const { dbWithExtensions } = await import('./db');
-    const allTransactions = await dbWithExtensions.getTransactions(userId);
+      // Primeiro, atualizamos transações vencidas (data anterior a hoje e status a_pagar)
+      const updateQuery = `
+        UPDATE transactions 
+        SET status = 'atrasada' 
+        WHERE user_id = $1 
+          AND type = 'expense'
+          AND date < $2
+          AND status = 'a_pagar'
+      `;
 
-    // Filter for upcoming expense transactions
-    return allTransactions
-      .filter(transaction => 
-        transaction.type === "expense" &&
-        new Date(transaction.date) >= today &&
-        new Date(transaction.date) <= thirtyDaysLater
-      )
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      await pool.query(updateQuery, [
+        userId,
+        today.toISOString().split('T')[0]
+      ]);
+
+      // Agora obtemos as próximas contas a pagar
+      const query = `
+        SELECT t.*, c.name as category_name, c.icon as category_icon, c.type as category_type
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1 
+          AND t.type = 'expense' 
+          AND ((t.date >= $2 AND t.date <= $3) OR (t.status = 'atrasada'))
+        ORDER BY t.date ASC
+        LIMIT 10
+      `;
+
+      const result = await pool.query(query, [
+        userId, 
+        today.toISOString().split('T')[0], 
+        futureDate.toISOString().split('T')[0]
+      ]);
+
+      // Formatar os resultados
+      const upcomingBills = result.rows.map((row) => ({
+        id: row.id,
+        description: row.description,
+        amount: row.amount,
+        date: row.date,
+        type: row.type,
+        status: row.status,
+        category: {
+          id: row.category_id,
+          name: row.category_name,
+          type: row.category_type,
+          icon: row.category_icon,
+        },
+      }));
+
+      return upcomingBills;
+    } catch (error) {
+      console.error("[getUpcomingBills] Error:", error);
+      throw error;
+    }
   }
 
   // Helper methods for initial setup

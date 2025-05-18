@@ -31,6 +31,7 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   isRecurring: boolean("is_recurring").default(false).notNull(),
   recurringId: integer("recurring_id").references(() => recurringTransactions.id),
+  status: text("status").default("a_pagar").notNull(), // "paga", "a_pagar", "atrasada"
 });
 
 export const recurringTransactions = pgTable("recurring_transactions", {

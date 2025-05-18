@@ -304,6 +304,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Descrição</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Categoria</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Data</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Status</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Valor</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Ações</th>
                       </tr>
@@ -406,6 +407,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Descrição</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Categoria</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Data</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Status</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Valor</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Ações</th>
                       </tr>

@@ -111,6 +111,7 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                     <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Descrição</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Categoria</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Vencimento</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Status</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Valor</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Ações</th>
                   </tr>
@@ -134,6 +135,41 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                           <span className={`px-2.5 py-0.5 ${dueDate.className} rounded-full text-xs`}>
                             {dueDate.label}
                           </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Button
+                            variant={bill.status === 'paga' ? 'outline' : 'default'}
+                            size="sm"
+                            className={`text-xs ${
+                              bill.status === 'paga' 
+                                ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' 
+                                : bill.status === 'atrasada'
+                                  ? 'bg-red-500 text-white hover:bg-red-600'
+                                  : 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'
+                            }`}
+                            onClick={() => {
+                              const newStatus = bill.status === 'paga' ? 'a_pagar' : 'paga';
+                              apiRequest('PATCH', `/api/transactions/${bill.id}`, { status: newStatus })
+                                .then(() => {
+                                  queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
+                                  queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
+                                  queryClient.invalidateQueries({ queryKey: [`/api/summary/${userId}`] });
+                                  toast({
+                                    title: `Conta marcada como ${newStatus === 'paga' ? 'paga' : 'a pagar'}`,
+                                    description: "Status atualizado com sucesso.",
+                                  });
+                                })
+                                .catch(() => {
+                                  toast({
+                                    title: "Erro",
+                                    description: "Não foi possível atualizar o status.",
+                                    variant: "destructive",
+                                  });
+                                });
+                            }}
+                          >
+                            {bill.status === 'paga' ? 'Paga' : bill.status === 'atrasada' ? 'Atrasada' : 'A Pagar'}
+                          </Button>
                         </td>
                         <td className="py-3 px-4 text-right font-medium">
                           {formatCurrency(parseFloat(bill.amount))}
