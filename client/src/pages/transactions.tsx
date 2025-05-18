@@ -450,13 +450,8 @@ export default function Transactions({ userId }: TransactionsProps) {
                                           throw new Error(`Falha na resposta da API: ${response.status}`);
                                         }
                                         
-                                        return responseData;o em JSON
-                                        try {
-                                          return JSON.parse(responseText);
-                                        } catch (e) {
-                                          console.error('Erro ao fazer parse da resposta JSON:', e);
-                                          return { success: false, message: responseText };
-                                        }
+                                        return responseData;
+                                      }
                                       })
                                       .then((data) => {
                                         console.log('Status atualizado com sucesso:', data);
