@@ -191,13 +191,15 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                               apiRequest('PATCH', `/api/transactions/${bill.id}`, formData)
                                 .then(async (response) => {
                                   let responseData;
+                                  let responseText;
+                                  
                                   try {
                                     // Usar diretamente o json() da resposta original
                                     responseData = await response.json();
                                     console.log(`UpcomingBills - Resposta do servidor (${response.status}):`, responseData);
                                   } catch (e) {
                                     // Fallback para text quando não é JSON válido
-                                    const responseText = await response.text();
+                                    responseText = await response.text();
                                     console.log(`UpcomingBills - Resposta do servidor como texto (${response.status}): ${responseText}`);
                                     
                                     if (!response.ok) {
@@ -215,16 +217,6 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                   if (!response.ok) {
                                     throw new Error(`UpcomingBills - Falha na resposta da API: ${response.status}`);
                                   }
-                                  
-                                  return responseData;
-                } catch (error) {
-                  console.error(`Erro ao atualizar status: ${error}`);
-                }
-              };
-
-                                  if (!response.ok) {
-                                    throw new Error(`Falha na resposta da API: ${response.status} - ${responseText}`);
-                                  }
 
                                   console.log('Status atualizado com sucesso');
                                   queryClient.invalidateQueries({ queryKey: [`/api/upcoming/${userId}`] });
@@ -236,6 +228,8 @@ export function UpcomingBills({ userId, onEditTransaction }: UpcomingBillsProps)
                                     description: `${newStatus === 'paga' ? '✅ Marcada como paga' : '⚠️ Desmarcada como paga'}`,
                                     variant: newStatus === 'paga' ? 'default' : 'destructive',
                                   });
+                                  
+                                  return responseData;
                                 })
                                 .catch((error) => {
                                   console.error('UpcomingBills - Erro ao atualizar status:', error);
