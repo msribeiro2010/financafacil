@@ -546,6 +546,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { pool } = await import('./db');
       const today = new Date().toISOString().split('T')[0];
       
+      console.log(`[GET /api/transactions/:userId] Atualizando status de transações vencidas (data atual: ${today})`);
+      
       // Atualizar transações vencidas
       await pool.query(`
         UPDATE transactions 
@@ -558,9 +560,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[GET /api/transactions/:userId] Status de transações vencidas atualizado`);
 
-      // Usar a função do dbWithExtensions
-      const { dbWithExtensions } = await import('./db');
-      const transactions = await dbWithExtensions.getTransactions(userId);
+      // Buscar diretamente do banco para garantir que obteremos os dados
+      const result = await pool.query(`
+        SELECT t.*, c.name as category_name, c.icon as category_icon 
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1
+        ORDER BY t.date DESC
+      `, [userId]);
+      
+      // Transformar os dados para incluir a categoria como um objeto aninhado
+      const transactions = result.rows.map(row => ({
+        ...row,
+        category: row.category_name ? {
+          id: row.category_id,
+          name: row.category_name,
+          icon: row.category_icon
+        } : null
+      }));
 
       console.log(`[GET /api/transactions/:userId] Encontradas ${transactions.length} transações`);
       res.json(transactions);

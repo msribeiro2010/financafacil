@@ -51,14 +51,34 @@ export default function Transactions({ userId }: TransactionsProps) {
   const [selectedAttachmentPath, setSelectedAttachmentPath] = useState('');
 
   // Fetch transactions
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading, isError, error } = useQuery({
     queryKey: [`/api/transactions/${userId}`],
+    onSuccess: (data) => {
+      console.log(`[APP] Transações carregadas com sucesso:`, data);
+    },
+    onError: (err) => {
+      console.error(`[APP] Erro ao carregar transações:`, err);
+    }
   });
 
   // Fetch categories
   const { data: categories } = useQuery({
     queryKey: ['/api/categories'],
+    onSuccess: (data) => {
+      console.log(`[APP] Categorias carregadas com sucesso:`, data);
+    }
   });
+  
+  // Se há erro, mostrar na UI
+  React.useEffect(() => {
+    if (isError) {
+      toast({
+        title: "Erro ao carregar transações",
+        description: String(error || "Verifique sua conexão com o servidor"),
+        variant: "destructive",
+      });
+    }
+  }, [isError, error, toast]);
 
   // Delete transaction mutation
   const deleteTransaction = useMutation({
@@ -177,6 +197,21 @@ export default function Transactions({ userId }: TransactionsProps) {
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 pb-2">
           <CardTitle>Transações</CardTitle>
           <div className="flex space-x-2">
+            <Button 
+              onClick={() => {
+                console.log("[APP] Recarregando dados de transações...");
+                queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
+                toast({
+                  title: "Dados recarregados",
+                  description: "As transações foram atualizadas.",
+                });
+              }} 
+              variant="outline"
+              className="mr-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+              Atualizar
+            </Button>
             <Button onClick={handleAddExpense} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10">
               <Plus className="h-4 w-4 mr-2" />
               Despesa
