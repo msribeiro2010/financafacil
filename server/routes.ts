@@ -1106,9 +1106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
-```
-
-```javascript
+//```
+//
+//```javascript
 import { type InsertTransaction, type Transaction } from "@shared/types";
 
 export class Storage {
