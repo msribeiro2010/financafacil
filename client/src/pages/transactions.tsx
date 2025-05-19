@@ -504,7 +504,7 @@ export default function Transactions({ userId }: TransactionsProps) {
                               )}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              {(transaction.attachment || transaction.attachment_path) && (
+                              {(transaction.attachment_path || transaction.attachment) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"

@@ -591,7 +591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Transformar os dados para incluir a categoria como um objeto aninhado
         const transactions = result.rows.map(row => ({
           ...row,
-          category: row.category_name ? {
+          category: row.category_id ? {
             id: row.category_id,
             name: row.category_name,
             icon: row.category_icon
@@ -703,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transactionId = parseInt(req.params.id);
       console.log(`[PATCH /api/transactions/:id] Body para transação ${transactionId}:`, req.body);
       console.log(`[PATCH /api/transactions/:id] Headers:`, req.headers);
-      
+
       // Log melhorado para depuração do status
       if (req.body.status !== undefined) {
         console.log(`[PATCH /api/transactions/:id] Status encontrado: "${req.body.status}" (tipo: ${typeof req.body.status})`);
@@ -712,7 +712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Tentar encontrar em outras propriedades do request
         console.log(`[PATCH /api/transactions/:id] Keys disponíveis no body:`, Object.keys(req.body));
       }
-      
+
       console.log(`[PATCH /api/transactions/:id] Tipo de Content-Type:`, req.headers['content-type']);
       console.log(`[PATCH /api/transactions/:id] Arquivo enviado:`, req.file || "Nenhum");
 
@@ -743,12 +743,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Simplificar a lógica para atualizar o status
       if (req.body.status !== undefined) {
         let statusValue = req.body.status;
-        
+
+        // One line analysis: The code updates the file attachment handling in the PATCH /api/transactions/:id route and the updateTransaction function within storage.ts to ensure correct processing of file uploads and removals.
         // Corrigir se o status vier como array (isso acontece com alguns formatos de form data)
         if (Array.isArray(statusValue)) {
           statusValue = statusValue[0]; // Pegar o primeiro valor
         }
-        
+
         // Validar o status para garantir que seja válido
         const validStatuses = ['paga', 'a_pagar', 'atrasada'];
         if (!validStatuses.includes(statusValue)) {
@@ -760,9 +761,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             validOptions: validStatuses
           });
         }
-        
+
         console.log(`[PATCH /api/transactions/:id] Status válido detectado: "${statusValue}" (tipo: ${typeof statusValue})`);
-        
+
         // Adicionar diretamente à lista de campos a atualizar
         updateFields.push(`status = $${valueIndex}`);
         updateValues.push(statusValue);
@@ -851,7 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateFields.push(`attachment_path = $${valueIndex}`);
         updateValues.push(attachmentPath);
         updateData.attachmentPath = attachmentPath;
-        console.log(`[PATCH /api/transactions/:id] Novo anexo: ${attachmentPath}`);
+        console.log(`[PATCH /api/transactions/:id] Novo anexo: ${attachmentPath}, filename: ${req.file.filename}, originalname: ${req.file.originalname}`);
         valueIndex++;
       } else if (req.body.removeAttachment === 'true') {
         updateFields.push(`attachment_path = $${valueIndex}`);
@@ -1105,3 +1106,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
+```
+
+```javascript
+import { type InsertTransaction, type Transaction } from "@shared/types";
+
+export class Storage {
+  async getCategories(type?: string) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getCategories(type);
+  }
+
+  async getTransactions(userId: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getTransactions(userId);
+  }
+
+  async getTransaction(id: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getTransaction(id);
+  }
+
+  async deleteTransaction(id: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.deleteTransaction(id);
+  }
+
+  async createTransaction(transaction: InsertTransaction) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.createTransaction(transaction);
+  }
+
+  async getRecurringTransactions(userId: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getRecurringTransactions(userId);
+  }
+
+  async getRecurringTransaction(id: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getRecurringTransaction(id);
+  }
+
+  async deleteRecurringTransaction(id: number) {
+     const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.deleteRecurringTransaction(id);
+  }
+
+  async createRecurringTransaction(transaction: InsertTransaction) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.createRecurringTransaction(transaction);
+  }
+
+  async updateRecurringTransaction(id: number, transaction: Partial<InsertTransaction>) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.updateRecurringTransaction(id, transaction);
+  }
+
+  async getTransactionSummary(userId: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getTransactionSummary(userId);
+  }
+
+  async getCategorySummary(userId: number, type: string) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getCategorySummary(userId, type);
+  }
+
+  async getUpcomingBills(userId: number) {
+    const { dbWithExtensions } = await import('./db');
+    return await dbWithExtensions.getUpcomingBills(userId);
+  }
+
+  async getUser(id: number) {
+    const { pool } = await import('./db');
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    return result.rows[0];
+  }
+
+  async getUserByUsername(username: string) {
+    const { pool } = await import('./db');
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    return result.rows[0];
+  }
+
+  async getUserByEmail(email: string) {
+    const { pool } = await import('./db');
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    return result.rows[0];
+  }
+
+  async createUser(user: { username: string; email: string; password: string; initialBalance: string; overdraftLimit: string; }) {
+    const { pool } = await import('./db');
+    const result = await pool.query(
+      'INSERT INTO users (username, email, password, initial_balance, overdraft_limit) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [user.username, user.email, user.password, user.initialBalance, user.overdraftLimit]
+    );
+    return result.rows[0];
+  }
+
+  async getTransactionById(id: number): Promise<Transaction | undefined> {
+    try {
+      const { pool } = await import('./db');
+      const result = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
+      if (result.rows.length > 0) {
+        return result.rows[0];
+      } else {
+        return undefined;
+      }
+    } catch (error) {
+      console.error(`[Storage] Erro ao buscar transação com ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
+    try {
+      console.log(`[Storage] Atualizando transação ${id} com:`, transaction);
+
+      // Construir a query de atualização dinamicamente
+      const { pool } = await import('./db');
+
+      // Verificar se a transação existe antes de atualizar
+      const existingTransaction = await this.getTransactionById(id);
+      if (!existingTransaction) {
+        throw new Error(`Transação com ID ${id} não encontrada`);
+      }
+
+      console.log(`[Storage] Transação existente:`, existingTransaction);
+
+      // Construir conjunto de campos para atualizar
+      const updateFields: string[] = [];
+      const values: any[] = [];
+      let paramCounter = 1;
+
+      if (transaction.userId !== undefined) {
+        updateFields.push(`user_id = $${paramCounter++}`);
+        values.push(transaction.userId);
+      }
+
+      if (transaction.description !== undefined) {
+        updateFields.push(`description = $${paramCounter++}`);
+        values.push(transaction.description);
+      }
+
+      if (transaction.amount !== undefined) {
+        updateFields.push(`amount = $${paramCounter++}`);
+        values.push(transaction.amount);
+      }
+
+      if (transaction.type !== undefined) {
+        updateFields.push(`type = $${paramCounter++}`);
+        values.push(transaction.type);
+      }
+
+      if (transaction.categoryId !== undefined) {
+        updateFields.push(`category_id = $${paramCounter++}`);
+        values.push(transaction.categoryId);
+      }
+
+      if (transaction.date !== undefined) {
+        updateFields.push(`date = $${paramCounter++}`);
+        values.push(transaction.date);
+      }
+
+      if (transaction.isRecurring !== undefined) {
+        updateFields.push(`is_recurring = $${paramCounter++}`);
+        values.push(transaction.isRecurring);
+      }
+
+      if (transaction.recurringId !== undefined) {
+        updateFields.push(`recurring_id = $${paramCounter++}`);
+        values.push(transaction.recurringId);
+      }
+
+      // Simplificar o tratamento de anexos - usar diretamente attachment_path
+      if (transaction.attachmentPath !== undefined) {
+        updateFields.push(`attachment_path = $${paramCounter++}`);
+        values.push(transaction.attachmentPath);
+        console.log(`[Storage] Atualizando attachment_path para: ${transaction.attachmentPath}`);
+      }
+
+      if (updateFields.length === 0) {
+        throw new Error("Nenhum campo para atualizar foi especificado.");
+      }
+
+      values.push(id); // Adicionar o ID no final
+      const updateQuery = `
+        UPDATE transactions 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramCounter++}
+        RETURNING *;
+      `;
+      
+      console.log(`[Storage] Executando query: ${updateQuery}`);
+      console.log(`[Storage] Valores: ${JSON.stringify(values)}`);
+
+      const result = await pool.query(updateQuery, values);
+
+      if (result.rows.length === 0) {
+        throw new Error("Falha ao atualizar a transação");
+      }
+
+      console.log(`[Storage] Transação atualizada com sucesso:`, result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`[Storage] Erro ao atualizar transação ${id}:`, error);
+      throw error;
+    }
+  }
+}
+
+export const storage = new Storage();
