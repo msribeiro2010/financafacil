@@ -459,11 +459,11 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value}
-                      value={field.value}
+                      value={field.value || ""}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
+                          <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -474,7 +474,10 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
                         ) : categories && categories.length > 0 ? (
                           categories.map((category: any) => (
                             <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name}
+                              <span className="flex items-center gap-2">
+                                <i className={category.icon}></i>
+                                {category.name}
+                              </span>
                             </SelectItem>
                           ))
                         ) : (
