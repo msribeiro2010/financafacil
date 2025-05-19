@@ -581,7 +581,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Buscar diretamente do banco para garantir que obteremos os dados
       try {
         const result = await pool.query(`
-          SELECT t.*, c.name as category_name, c.icon as category_icon 
+          SELECT 
+            t.*,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.type as category_type
           FROM transactions t
           LEFT JOIN categories c ON t.category_id = c.id
           WHERE t.user_id = $1
@@ -594,8 +598,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           category: row.category_id ? {
             id: row.category_id,
             name: row.category_name,
-            icon: row.category_icon
-          } : null
+            icon: row.category_icon,
+            type: row.category_type
+          } : null,
+          // Manter campos antigos para compatibilidade
+          category_name: row.category_name,
+          category_icon: row.category_icon
         }));
 
         console.log(`[GET /api/transactions/:userId] Encontradas ${transactions.length} transações`);
