@@ -30,18 +30,30 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
 
   // Get categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<any>({
-    queryKey: ['/api/categories'],
+    queryKey: ['/api/categories', 'expense'],
     queryFn: async () => {
       const response = await fetch('/api/categories');
+      if (!response.ok) {
+        throw new Error('Erro ao carregar categorias');
+      }
       const data = await response.json();
       return data.filter((category: any) => category.type === 'expense');
     },
     enabled: isOpen,
     onSuccess: (data) => {
       console.log('Categorias de despesa carregadas:', data);
+      // If editing and category exists, ensure form is updated
+      if (isEditMode && transaction?.categoryId) {
+        form.setValue('categoryId', transaction.categoryId.toString());
+      }
     },
     onError: (error) => {
       console.error('Erro ao carregar categorias de despesa:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as categorias',
+        variant: 'destructive',
+      });
     }
   });
 
