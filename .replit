@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Start Application"
+runButton = "Start Server Clean"
 
 [[workflows.workflow]]
 name = "Project"
@@ -261,6 +261,27 @@ args = "NODE_ENV=development npx tsx server/index.ts"
 
 [[workflows.workflow]]
 name = "Restart Server"
+author = 41931751
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"server/index.ts\" || echo \"Nenhum processo do servidor em execução\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "kill -9 $(lsof -t -i:5000) 2>/dev/null || echo \"Nenhum processo executando na porta 5000\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 2"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development npx tsx server/index.ts"
+
+[[workflows.workflow]]
+name = "Start Server Clean"
 author = 41931751
 mode = "sequential"
 
