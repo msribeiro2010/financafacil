@@ -30,7 +30,12 @@ export function ExpenseModal({ isOpen, onClose, userId, transaction }: ExpenseMo
 
   // Get categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<any>({
-    queryKey: ['/api/categories?type=expense'],
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      return data.filter((category: any) => category.type === 'expense');
+    },
     enabled: isOpen,
     onSuccess: (data) => {
       console.log('Categorias de despesa carregadas:', data);
