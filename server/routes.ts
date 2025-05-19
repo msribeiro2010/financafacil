@@ -748,14 +748,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (typeof statusValue !== 'string') {
           statusValue = String(statusValue);
         }
+        
+        // Validar os valores permitidos para status
+        const validStatus = ['paga', 'a_pagar', 'atrasada'];
+        if (!validStatus.includes(statusValue)) {
+          console.log(`[PATCH /api/transactions/:id] Status inválido: ${statusValue}`);
+          return res.status(400).json({ message: `Status inválido. Valores permitidos: ${validStatus.join(', ')}` });
+        }
+
         updateFields.push(`status = $${valueIndex++}`);
         updateValues.push(statusValue);
         updateData.status = statusValue;
         console.log(`[PATCH /api/transactions/:id] Status atualizado para: ${statusValue}`);
       }
-      
-      // Continue rest of the function implementation...
-      // For now, let's just return a success response if we've made it this far
+
       if (updateFields.length === 0) {
         console.log(`[PATCH /api/transactions/:id] Nenhum campo para atualizar`);
         return res.status(400).json({ message: "Nenhum campo válido para atualização" });
