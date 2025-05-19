@@ -744,5 +744,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.status !== undefined) {
         let statusValue = req.body.status;
 
-        // One line//
-//
+
+        // Verificar se o status é uma string válida
+        if (typeof statusValue !== 'string')
+
+          statusValue = String(statusValue);
+        updateFields.push(`status = $${valueIndex++}`);
+        updateValues.push(statusValue);
+        updateData.status = statusValue;
+        console.log(`[PATCH /api/transactions/:id] Status atualizado para: ${statusValue}`);
+        }
+      }
+
+  
