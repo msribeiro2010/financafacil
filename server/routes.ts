@@ -744,16 +744,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.status !== undefined) {
         let statusValue = req.body.status;
 
-
         // Verificar se o status é uma string válida
-        if (typeof statusValue !== 'string')
-
+        if (typeof statusValue !== 'string') {
           statusValue = String(statusValue);
+        }
         updateFields.push(`status = $${valueIndex++}`);
         updateValues.push(statusValue);
         updateData.status = statusValue;
         console.log(`[PATCH /api/transactions/:id] Status atualizado para: ${statusValue}`);
-        }
       }
+      
+      // Continue rest of the function implementation...
+      // For now, let's just return a success response if we've made it this far
+      if (updateFields.length === 0) {
+        console.log(`[PATCH /api/transactions/:id] Nenhum campo para atualizar`);
+        return res.status(400).json({ message: "Nenhum campo válido para atualização" });
+      }
+
+      // Build and execute the update query
+      const updateQuery = `
+        UPDATE transactions 
+        SET ${updateFields.join(', ')} 
+        WHERE id = $${valueIndex++} 
+        RETURNING *
+      `;
+      
+      updateValues.push(transactionId);
+      
+      const result = await pool.query(updateQuery, updateValues);
+      
+      if (result.rows.length === 0) {
+        console.log(`[PATCH /api/transactions/:id] Falha ao atualizar transação`);
+        return res.status(500).json({ message: "Falha ao atualizar transação" });
+      }
+      
+      console.log(`[PATCH /api/transactions/:id] Transação atualizada com sucesso:`, result.rows[0]);
+      return res.json(result.rows[0]);
+    } catch (error) {
+      console.error(`[PATCH /api/transactions/:id] Erro:`, error);
+      return res.status(500).json({ 
+        message: "Erro ao atualizar transação", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   
