@@ -29,7 +29,7 @@ export function IncomeModal({ isOpen, onClose, userId, transaction }: IncomeModa
 
   // Get categories
   const { data: categories, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['/api/categories?type=income'],
+    queryKey: ['/api/categories', { type: 'income' }],
     enabled: isOpen,
     onSuccess: (data) => {
       console.log('Categorias de receita carregadas:', data);

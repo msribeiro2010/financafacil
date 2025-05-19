@@ -166,6 +166,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "funcionando" });
   });
 
+  // Categories route
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const type = req.query.type as string | undefined;
+      const categories = await storage.getCategories(type);
+      res.json(categories);
+    } catch (error) {
+      console.error(`[GET /api/categories] Erro:`, error);
+      res.status(500).json({ message: "Erro ao buscar categorias" });
+    }
+  });
+
   // User routes
   app.get("/api/user/:id", async (req, res) => {
     try {
