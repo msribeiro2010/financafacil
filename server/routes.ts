@@ -794,4 +794,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // … última rota PATCH …
+
+  // Cria o HTTP server e retorna
+  const server: Server = createServer(app);
+  return server;
 }
