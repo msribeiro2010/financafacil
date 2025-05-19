@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Run Server (Fixed)"
+runButton = "Restart Server"
 
 [[workflows.workflow]]
 name = "Project"
