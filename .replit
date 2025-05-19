@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Start Server Clean"
+runButton = "Run Server (Fixed)"
 
 [[workflows.workflow]]
 name = "Project"
@@ -300,3 +300,58 @@ args = "sleep 2"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=development npx tsx server/index.ts"
+
+[[workflows.workflow]]
+name = "Run Server"
+author = 41931751
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"server/index.ts\" || echo \"No server process running\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "kill -9 $(lsof -t -i:5000) 2>/dev/null || echo \"No process running on port 5000\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 2"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development npx tsx server/index.ts"
+
+[[workflows.workflow]]
+name = "Run Server (Fixed)"
+author = 41931751
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"server/index.ts\" || echo \"No server process running\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "kill -9 $(lsof -t -i:5000) 2>/dev/null || echo \"No process running on port 5000\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 2"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development npx tsx server/index.ts"
+
+[[workflows.workflow]]
+name = "Run Production Build"
+author = 41931751
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run build"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=production node dist/server/index.js"
