@@ -748,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (typeof statusValue !== 'string') {
           statusValue = String(statusValue);
         }
-        
+
         // Validar os valores permitidos para status
         const validStatus = ['paga', 'a_pagar', 'atrasada'];
         if (!validStatus.includes(statusValue)) {
@@ -774,16 +774,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE id = $${valueIndex++} 
         RETURNING *
       `;
-      
+
       updateValues.push(transactionId);
-      
+
       const result = await pool.query(updateQuery, updateValues);
-      
+
       if (result.rows.length === 0) {
         console.log(`[PATCH /api/transactions/:id] Falha ao atualizar transação`);
         return res.status(500).json({ message: "Falha ao atualizar transação" });
       }
-      
+
       console.log(`[PATCH /api/transactions/:id] Transação atualizada com sucesso:`, result.rows[0]);
       return res.json(result.rows[0]);
     } catch (error) {
@@ -794,5 +794,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  
+}
